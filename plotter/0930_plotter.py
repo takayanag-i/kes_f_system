@@ -77,7 +77,8 @@ class Window(QMainWindow):
 
         # ウィジェット・レイアウト
         self.widget = QWidget()  # ok
-        self.widget_for_time_series = pg.GraphicsLayoutWidget(show=True)  # ok plot_widgetに改名
+        self.widget_for_time_series = pg.GraphicsLayoutWidget(show=True)
+        # ok plot_widgetに改名
         self.widget_for_comport = QWidget()  # ok
         self.widget_for_controller = QWidget()  # ok
 
@@ -95,7 +96,7 @@ class Window(QMainWindow):
         self.widget_for_controller.setLayout(self.layout3)  # ok
 
         self.UiComponents()  # Uiの要素を表示する
-        self.plot_with_respect_to_time()  # ! 不明
+        self.plot_with_respect_to_time()  # ok
 
         self.layout.addWidget(self.widget_for_time_series, 0, 1)  # ok
         self.layout.addWidget(self.widget_for_comport, 0, 0)  # ok
@@ -187,7 +188,7 @@ class Window(QMainWindow):
         self.y4 = np.array([])
         self.y5 = np.array([])
 
-        self.t_plt = np.array([]) # ! pltがなくなった
+        self.t_plt = np.array([])  # ! pltがなくなった
         self.y1_plt = np.array([])
         self.y2_plt = np.array([])
         self.y3_plt = np.array([])
@@ -444,72 +445,72 @@ class Window(QMainWindow):
 
     def update(self):
         if self.num == 0:
-            input_serial = self.ser.readline().rstrip()
-            input_serial_2nd = self.ser_2nd.readline().rstrip()
+            input_serial = self.ser.readline().rstrip()  # ok
+            input_serial_2nd = self.ser_2nd.readline().rstrip()  # ok
             try:
-                input = input_serial.decode()
-                input_2nd = input_serial_2nd.decode()
-                tmp3, tmp4, tmp6 = input.split(",")
-                tmp5, tmp1, tmp2 = input_2nd.split(",")
-                tmp1 = float(tmp1) * 3.3 / 4095
-                tmp2 = float(tmp2) * 3.3 / 4095
-                tmp3 = float(tmp3)
-                tmp4 = float(tmp4)
-                tmp5 = float(tmp5) * 3.3 / 4095
-                tmp6 = float(tmp6) / self.MICRO_TO_UNIT
-                self.t0 = tmp6
-                self.y1 = np.append(self.y1, tmp1)
-                self.y2 = np.append(self.y2, tmp2)
-                self.y3 = np.append(self.y3, tmp3)
-                self.y4 = np.append(self.y4, tmp4)
-                self.y5 = np.append(self.y5, tmp5)
-                self.t = np.append(self.t, 0)
-                self.y1_plt = np.append(self.y1_plt, tmp1)
-                self.y2_plt = np.append(self.y2_plt, tmp2)
-                self.y3_plt = np.append(self.y3_plt, tmp3)
-                self.y4_plt = np.append(self.y4_plt, tmp4)
-                self.y5_plt = np.append(self.y5_plt, tmp5)
-                self.t_plt = np.append(self.t_plt, 0)
-                self.curve.setData(self.t_plt, self.y1_plt)
-                self.curve2.setData(self.t_plt, self.y2_plt)
-                self.curve3.setData(self.t_plt, self.y3_plt)
-                self.curve4.setData(self.t_plt, self.y4_plt)
-                self.curve5.setData(self.t_plt, self.y5_plt)
-                self.num += 1
+                input = input_serial.decode()  # ok
+                input_2nd = input_serial_2nd.decode()  # ok
+                tmp3, tmp4, tmp6 = input.split(",")  # ok
+                tmp5, tmp1, tmp2 = input_2nd.split(",")  # ok
+                tmp1 = float(tmp1) * 3.3 / 4095  # ok
+                tmp2 = float(tmp2) * 3.3 / 4095  # ok
+                tmp3 = float(tmp3)  # ok
+                tmp4 = float(tmp4)  # ok
+                tmp5 = float(tmp5) * 3.3 / 4095  # ok
+                tmp6 = float(tmp6) / self.MICRO_TO_UNIT  # ok
+                self.t0 = tmp6  # ok
+                self.y1 = np.append(self.y1, tmp1)  # ok
+                self.y2 = np.append(self.y2, tmp2)  # ok
+                self.y3 = np.append(self.y3, tmp3)  # ok
+                self.y4 = np.append(self.y4, tmp4)  # ok
+                self.y5 = np.append(self.y5, tmp5)  # ok
+                self.t = np.append(self.t, 0)  # ok
+                self.y1_plt = np.append(self.y1_plt, tmp1)  # ok
+                self.y2_plt = np.append(self.y2_plt, tmp2)  # ok
+                self.y3_plt = np.append(self.y3_plt, tmp3)  # ok
+                self.y4_plt = np.append(self.y4_plt, tmp4)  # ok
+                self.y5_plt = np.append(self.y5_plt, tmp5)  # ok
+                self.t_plt = np.append(self.t_plt, 0)  # ok
+                self.curve.setData(self.t_plt, self.y1_plt)  # ok
+                self.curve2.setData(self.t_plt, self.y2_plt)  # ok
+                self.curve3.setData(self.t_plt, self.y3_plt)  # ok
+                self.curve4.setData(self.t_plt, self.y4_plt)  # ok
+                self.curve5.setData(self.t_plt, self.y5_plt)  # ok
+                self.num += 1  # ok
             except (ValueError, UnicodeDecodeError):
                 self.num += 1
         elif 0 < self.num < self.DATA_LENGTH:
-            input_serial = self.ser.readline().rstrip()
-            input_serial_2nd = self.ser_2nd.readline().rstrip()
+            input_serial = self.ser.readline().rstrip()  # ok
+            input_serial_2nd = self.ser_2nd.readline().rstrip()  # ok
             try:
                 input = input_serial.decode()
                 input_2nd = input_serial_2nd.decode()
-                tmp3, tmp4, tmp6 = input.split(",")
-                tmp5, tmp1, tmp2 = input_2nd.split(",")
-                tmp1 = float(tmp1) * 3.3 / 4095
-                tmp2 = float(tmp2) * 3.3 / 4095
-                tmp3 = float(tmp3)
-                tmp4 = float(tmp4)
-                tmp5 = float(tmp5) * 3.3 / 4095
+                tmp3, tmp4, tmp6 = input.split(",")  # ok
+                tmp5, tmp1, tmp2 = input_2nd.split(",")  # ok
+                tmp1 = float(tmp1) * 3.3 / 4095  # ok
+                tmp2 = float(tmp2) * 3.3 / 4095  # ok
+                tmp3 = float(tmp3)  # ok
+                tmp4 = float(tmp4)  # ok
+                tmp5 = float(tmp5) * 3.3 / 4095  # ok
                 tmp6 = float(tmp6) / self.MICRO_TO_UNIT - self.t0
-                self.y1 = np.append(self.y1, tmp1)
-                self.y2 = np.append(self.y2, tmp2)
-                self.y3 = np.append(self.y3, tmp3)
-                self.y4 = np.append(self.y4, tmp4)
-                self.y5 = np.append(self.y5, tmp5)
-                self.t = np.append(self.t, tmp6)
-                if self.num % 5 == 0:  #50 Hzで表示
-                    self.y1_plt = np.append(self.y1_plt, tmp1)
-                    self.y2_plt = np.append(self.y2_plt, tmp2)
-                    self.y3_plt = np.append(self.y3_plt, tmp3)
-                    self.y4_plt = np.append(self.y4_plt, tmp4)
-                    self.y5_plt = np.append(self.y5_plt, tmp5)
-                    self.t_plt = np.append(self.t_plt, tmp6)
-                    self.curve.setData(self.t_plt, self.y1_plt)
-                    self.curve2.setData(self.t_plt, self.y2_plt)
-                    self.curve3.setData(self.t_plt, self.y3_plt)
-                    self.curve4.setData(self.t_plt, self.y4_plt)
-                    self.curve5.setData(self.t_plt, self.y5_plt)
+                self.y1 = np.append(self.y1, tmp1)  # ok
+                self.y2 = np.append(self.y2, tmp2)  # ok
+                self.y3 = np.append(self.y3, tmp3)  # ok
+                self.y4 = np.append(self.y4, tmp4)  # ok
+                self.y5 = np.append(self.y5, tmp5)  # ok
+                self.t = np.append(self.t, tmp6)  # ok
+                if self.num % 5 == 0:
+                    self.y1_plt = np.append(self.y1_plt, tmp1)  # ok
+                    self.y2_plt = np.append(self.y2_plt, tmp2)  # ok
+                    self.y3_plt = np.append(self.y3_plt, tmp3)  # ok
+                    self.y4_plt = np.append(self.y4_plt, tmp4)  # ok
+                    self.y5_plt = np.append(self.y5_plt, tmp5)  # ok
+                    self.t_plt = np.append(self.t_plt, tmp6)  # ok
+                    self.curve.setData(self.t_plt, self.y1_plt)  # ok
+                    self.curve2.setData(self.t_plt, self.y2_plt)  # ok
+                    self.curve3.setData(self.t_plt, self.y3_plt)  # ok
+                    self.curve4.setData(self.t_plt, self.y4_plt)  # ok
+                    self.curve5.setData(self.t_plt, self.y5_plt)  # ok
                 self.num += 1
             except (ValueError, UnicodeDecodeError):
                 self.num += 1
@@ -549,4 +550,3 @@ App = QApplication(sys.argv)  # ok
 window = Window()  # ok
 # スタートさせる??
 sys.exit(App.exec())  # ok
-  # ok

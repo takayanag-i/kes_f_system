@@ -99,20 +99,20 @@ class SerialManager:
         if self.ser and self.ser.is_open:
             self.ser.write(data)
 
-    def read_line(self):
-        """シリアルから読む.
+    def read_serial_data(self):
+        """シリアルから値を読む.
 
-        文字列の右側の空白を削除
-
-        Returns:
+        Returns: 一行分
         """
-        if self.ser and self.ser.is_open:
-            return self.ser.readline().decode('utf-8').strip()
-        return None
+        try:
+            input_serial = self.ser.readline().rstrip()
+            return input_serial.decode()
+        except (UnicodeDecodeError, ValueError):
+            return None
 
 
 class MotorController:
-    """モーターコントロール
+    """モーターコントローラ
     """
     def __init__(self, serial_manager):
         self.serial_manager = serial_manager
@@ -150,51 +150,6 @@ class MotorController:
         print("Motor x reversed")
 
 
-class PlotManager:
-    def __init__(self, plot_widget):
-        """コンストラクタ
-
-        Arguments:
-            plot_widget -- プロットウィジェット
-        """
-        self.plot_widget = plot_widget
-        self.init_plot()
-        self.reset_data()
-
-    def init_plot(self):
-        pass
-        # self.plot = self.plot_widget.addPlot()
-        # self.plot.showGrid(x=True, y=True)
-        # self.plot.addLegend()
-        # self.curve1 = self.plot.plot(pen='r', name='F1')
-        # self.curve2 = self.plot.plot(pen='g', name='F2')
-        # self.curve3 = self.plot.plot(pen='b', name='Disp1')
-        # self.curve4 = self.plot.plot(pen='y', name='Disp2')
-        # self.curve5 = self.plot.plot(pen='m', name='Sensor')
-
-    def reset_data(self):
-        self.t = np.array([])
-        self.y1 = np.array([])
-        self.y2 = np.array([])
-        self.y3 = np.array([])
-        self.y4 = np.array([])
-        self.y5 = np.array([])
-
-    def update_plot(self, new_data):
-        self.t = np.append(self.t, new_data['t'])
-        self.y1 = np.append(self.y1, new_data['y1'])
-        self.y2 = np.append(self.y2, new_data['y2'])
-        self.y3 = np.append(self.y3, new_data['y3'])
-        self.y4 = np.append(self.y4, new_data['y4'])
-        self.y5 = np.append(self.y5, new_data['y5'])
-
-        self.curve1.setData(self.t, self.y1)
-        self.curve2.setData(self.t, self.y2)
-        self.curve3.setData(self.t, self.y3)
-        self.curve4.setData(self.t, self.y4)
-        self.curve5.setData(self.t, self.y5)
-
-
 class Window(QMainWindow):
     """メインウィンドウクラス
 
@@ -203,7 +158,6 @@ class Window(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        self.serial_manager = SerialManager()  # シリアルマネージャのnew
         # モータコントローラのnew
         self.motor_controller = MotorController(self.serial_manager)
         self.init_ui()
@@ -244,7 +198,7 @@ class Window(QMainWindow):
             'Stop', self.plot_stop_func, False
         )
         self.restart_button = self.create_button(
-            'Reset', self.reset_func, False
+            'Reset', self.reset, False
         )
         self.exit_button = self.create_button('Exit', self.exit_func)
 
@@ -335,7 +289,17 @@ class Window(QMainWindow):
         return [port.device for port in ports]
 
     def on_combobox_changed(self, index):
+        """コンボボックスの値が変更されたときの処理.
+
+        スロットメソッド
+        選択されたポートをオープンしてラインテキストを変更
+
+        Arguments:
+            index -- インデックス
+            呼び出し元のシグナルcurrentIndexChangedから受け取る
+        """
         port_name = self.combobox.itemText(index)
+        self.serial_manager = SerialManager()  # シリアルマネージャのnew
         self.serial_manager.close_port()
         self.serial_manager.open_port(port_name)
         if self.serial_manager.ser.is_open:
@@ -346,8 +310,14 @@ class Window(QMainWindow):
             self.message_box.setText(f"Failed to connect to {port_name}")
 
     def save_func(self):
+        """_summary_
+        """
         array = np.append(np.array([self.plot_manager.t,
-                                    self.plot_manager.y1, self.plot_manager.y2, self.plot_manager.y3, self.plot_manager.y4, self.plot_manager.y5]), axis=0)
+                                    self.plot_manager.y1,
+                                    self.plot_manager.y2,
+                                    self.plot_manager.y3,
+                                    self.plot_manager.y4,
+                                    self.plot_manager.y5]), axis=0)
         array = array.T
         columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
         data = pd.DataFrame(array, columns=columns)
@@ -364,7 +334,7 @@ class Window(QMainWindow):
         except Exception:
             self.plot_start_button.setText('エラー！')
         self.timer = QTimer()
-        self.timer.timeout.connect(self.update_plot)
+        self.timer.timeout.connect(self.update)
         self.timer.start(0)
 
     def plot_stop_func(self):
@@ -375,32 +345,62 @@ class Window(QMainWindow):
         self.restart_button.setEnabled(True)
         self.restart_button.setStyleSheet(STYLE)
 
-    def reset_func(self):
+    def reset(self):
         self.plot_manager.reset_data()
         self.plot_stop_button.setEnabled(False)
         self.plot_start_button.setEnabled(True)
         self.plot_start_button.setStyleSheet(STYLE)
         # !
 
-    def update_plot(self):
-        line = self.serial_manager.read_line()
-        if line:
-            data = self.parse_serial_data(line)
-            self.plot_manager.update_plot(data)
+    def update(self):
+        if self.num == 0:
+            input1 = self.serial_manager.read_serial_data()
+            input2 = self.serial_manager.read_serial_data()
+            if input1 and input2:
+                processed_data = self.plot_manager.process_data(input1, input2)
+                if processed_data:
+                    tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
+                    self.t0 = tmp6
+                    tmp6 = 0
+                    self.plot_manager.update_arrays(self, tmp1, tmp2, tmp3,
+                                                    tmp4, tmp5, tmp6)
+                    self.plot_manager.update_plts(self, tmp1, tmp2, tmp3,
+                                                  tmp4, tmp5, tmp6)
+                    self.num += 1
+            else:
+                self.num += 1
+        elif 0 < self.num < self.DATA_LENGTH:
+            input1 = self.serial_manager.read_serial_data(self.ser)
+            input2 = self.serial_manager.read_serial_data(self.ser)
+            if input1 and input2:
+                processed_data = self.plot_manager.process_data(input1, input2)
+                if processed_data:
+                    tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
+                    tmp6 -= self.t0
+                    self.plot_manager.update_arrays(self, tmp1, tmp2, tmp3,
+                                                    tmp4, tmp5, tmp6)
+                    if self.num % 5 == 0:
+                        self.plot_manager.update_plts(self, tmp1, tmp2, tmp3,
+                                                      tmp4, tmp5, tmp6)
+                    self.num += 1
+            else:
+                self.num += 1
+        else:
+            self.timer.stop()
 
-    def parse_serial_data(self, line):
-        try:
-            parts = list(map(float, line.split(',')))
-            return {
-                't': parts[0],
-                'y1': parts[1],
-                'y2': parts[2],
-                'y3': parts[3],
-                'y4': parts[4],
-                'y5': parts[5],
-            }
-        except ValueError:
-            return None
+    # def parse_serial_data(self, line):
+    #     try:
+    #         parts = list(map(float, line.split(',')))
+    #         return {
+    #             't': parts[0],
+    #             'y1': parts[1],
+    #             'y2': parts[2],
+    #             'y3': parts[3],
+    #             'y4': parts[4],
+    #             'y5': parts[5],
+    #         }
+    #     except ValueError:
+    #         return None
 
     def exit_func(self):
         self.serial_manager.close_port()
@@ -415,27 +415,30 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
         self.font = QFont(self.fontFamily, 12)
 
         self.plot1 = self.addPlot(row=0, col=0)
+        self.curve1 = self.plot1.plot(pen=(221, 238, 255))
 
-        self.PlotCurve2 = pg.PlotCurveItem(title="Force2", pen=(153, 221, 255))
-        self.p2 = pg.ViewBox()
-        self.p2.addItem(self.PlotCurve2)
-        self.PlotCurve3 = pg.PlotCurveItem(title="Disp1", pen=(181, 255, 20))
-        self.p3 = pg.ViewBox()
-        self.p3.addItem(self.PlotCurve3)
-        self.PlotCurve4 = pg.PlotCurveItem(title="Disp2", pen='r')
-        self.p4 = pg.ViewBox()
-        self.p4.addItem(self.PlotCurve4)
-        self.PlotCurve5 = pg.PlotCurveItem(title="Sensor", pen='y')
-        self.p5 = pg.ViewBox()
-        self.p5.addItem(self.PlotCurve5)
+        self.curve2 = pg.PlotCurveItem(title="Force2", pen=(153, 221, 255))
+        self.curve3 = pg.PlotCurveItem(title="Disp1", pen=(181, 255, 20))
+        self.curve4 = pg.PlotCurveItem(title="Disp2", pen='r')
+        self.curve5 = pg.PlotCurveItem(title="Sensor", pen='y')
+
+        self.view_box2 = pg.ViewBox()
+        self.view_box3 = pg.ViewBox()
+        self.view_box4 = pg.ViewBox()
+        self.view_box5 = pg.ViewBox()
+
+        self.view_box2.addItem(self.curve2)
+        self.view_box3.addItem(self.curve3)
+        self.view_box4.addItem(self.curve4)
+        self.view_box5.addItem(self.curve5)
+
         self.ax5 = pg.AxisItem(orientation='right')
-
         self.set_graph_multiple_axis(
-            self.plot1, self.p2, self.p3, self.p4, self.p5, self.ax5)
+            self.plot1, self.view_box2, self.view_box3, self.view_box4,
+            self.view_box5, self.ax5)
         self.set_graph_frame_font(self.plot1, self.ax5)
         self.setup_labels()
 
-        self.curve = self.plot1.plot(pen=(221, 238, 255))
         pg.setConfigOptions(antialias=True)
 
     def set_graph_multiple_axis(self, plot1: pg.PlotItem,
@@ -503,10 +506,102 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
         self.plot1.setXRange(0, 50, padding=0)
         self.plot1.setYRange(-0.1, 3.3, padding=0)
         # p1.setRange(yRange = (-10, 10), padding = 0)
-        self.p2.setRange(yRange=(-0.1, 3.3), padding=0)
-        self.p3.setRange(yRange=(-10, 10), padding=0)
-        self.p4.setRange(yRange=(-10, 10), padding=0)
-        self.p5.setRange(yRange=(-0.1, 3.3), padding=0)
+        self.view_box2.setRange(yRange=(-0.1, 3.3), padding=0)
+        self.view_box3.setRange(yRange=(-10, 10), padding=0)
+        self.view_box4.setRange(yRange=(-10, 10), padding=0)
+        self.view_box5.setRange(yRange=(-0.1, 3.3), padding=0)
+
+
+class PlotManager:
+    """プロットマネージャ
+    """
+    def __init__(self, plot_widget: MultiAxisGraphWidget):
+        """コンストラクタ
+
+        Arguments:
+            plot_widget -- プロットウィジェット
+        """
+        self.pw = plot_widget
+        self.init_plot()
+        self.reset_data()
+
+    def init_plot(self):
+        pass
+        # self.plot = self.plot_widget.addPlot()
+        # self.plot.showGrid(x=True, y=True)
+        # self.plot.addLegend()
+        # self.curve1 = self.plot.plot(pen='r', name='F1')
+        # self.curve2 = self.plot.plot(pen='g', name='F2')
+        # self.curve3 = self.plot.plot(pen='b', name='Disp1')
+        # self.curve4 = self.plot.plot(pen='y', name='Disp2')
+        # self.curve5 = self.plot.plot(pen='m', name='Sensor')
+
+    def reset_data(self):
+        self.t = np.array([])
+        self.y1 = np.array([])
+        self.y2 = np.array([])
+        self.y3 = np.array([])
+        self.y4 = np.array([])
+        self.y5 = np.array([])
+
+        self.t_plt = np.array([])
+        self.y1_plt = np.array([])
+        self.y2_plt = np.array([])
+        self.y3_plt = np.array([])
+        self.y4_plt = np.array([])
+        self.y5_plt = np.array([])
+
+    def process_data(input1, input2):
+        """一時データの切り出しと加工"""
+        try:
+            tmp3, tmp4, tmp6 = input1.split(",")
+            tmp5, tmp1, tmp2 = input2.split(",")
+            tmp1 = float(tmp1) * 3.3 / 4095
+            tmp2 = float(tmp2) * 3.3 / 4095
+            tmp3 = float(tmp3)
+            tmp4 = float(tmp4)
+            tmp5 = float(tmp5) * 3.3 / 4095
+            tmp6 = float(tmp6) / MICRO_TO_UNIT
+            return tmp1, tmp2, tmp3, tmp4, tmp5, tmp6
+        except ValueError:
+            return None
+
+    def update_arrays(self, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6):
+        """保存用配列に値を追加"""
+        self.y1 = np.append(self.y1, tmp1)
+        self.y2 = np.append(self.y2, tmp2)
+        self.y3 = np.append(self.y3, tmp3)
+        self.y4 = np.append(self.y4, tmp4)
+        self.y5 = np.append(self.y5, tmp5)
+        self.t = np.append(self.t, tmp6)
+
+    def update_plts(self, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6):
+        """表示用配列に値を追加"""
+        self.y1_plt = np.append(self.y1_plt, tmp1)
+        self.y2_plt = np.append(self.y2_plt, tmp2)
+        self.y3_plt = np.append(self.y3_plt, tmp3)
+        self.y4_plt = np.append(self.y4_plt, tmp4)
+        self.y5_plt = np.append(self.y5_plt, tmp5)
+        self.t_plt = np.append(self.t_plt, tmp6)
+        self.pw.curve1.setData(self.t_plt, self.y1_plt)
+        self.pw.curve2.setData(self.t_plt, self.y2_plt)
+        self.pw.curve3.setData(self.t_plt, self.y3_plt)
+        self.pw.curve4.setData(self.t_plt, self.y4_plt)
+        self.pw.curve5.setData(self.t_plt, self.y5_plt)
+
+    # def update(self, new_data):
+    #     self.t_plt = np.append(self.t, new_data['t'])
+    #     self.y1_plt = np.append(self.y1, new_data['y1'])
+    #     self.y2_plt = np.append(self.y2, new_data['y2'])
+    #     self.y3_plt = np.append(self.y3, new_data['y3'])
+    #     self.y4_plt = np.append(self.y4, new_data['y4'])
+    #     self.y5_plt = np.append(self.y5, new_data['y5'])
+
+    #     self.pw.curve1.setData(self.t_plt, self.y1_plt)
+    #     self.pw.curve2.setData(self.t_plt, self.y2_plt)
+    #     self.pw.curve3.setData(self.t_plt, self.y3_plt)
+    #     self.pw.curve4.setData(self.t_plt, self.y4_plt)
+    #     self.pw.curve5.setData(self.t_plt, self.y5_plt)
 
 
 def main():
