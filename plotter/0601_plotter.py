@@ -170,17 +170,17 @@ class Window(QMainWindow):
         self.motor_controller = MotorController(self.sm1)  # 1つ目のシリアルポートを使う
         self.widget_for_controller = MotorControlWidget(self.motor_controller)
 
-        self.save_button = create_btn('Save', self.save_func)
-        self.plot_start_button = create_btn(
+        self.save_button = Button('Save', self.save_func)
+        self.plot_start_button = Button(
             'Start', self.plot_start_func, False
         )
-        self.plot_stop_button = create_btn(
+        self.plot_stop_button = Button(
             'Stop', self.plot_stop_func, False
         )
-        self.plot_reset_button = create_btn(
+        self.plot_reset_button = Button(
             'Reset', self.reset, False
         )
-        self.exit_button = create_btn('Exit', self.exit_func)
+        self.exit_button = Button('Exit', self.exit_func)
 
         dt = datetime.datetime.now()
         line_text = dt.strftime('%Y-%m%d-%H%M-プロジェクト名')
@@ -557,17 +557,17 @@ class MotorControlWidget(QWidget):
         """UIの初期化"""
         layout = QGridLayout(self)
 
-        self.motor_start_1 = create_btn(
+        self.motor_start_1 = Button(
             ELONG_X_LAVEL, self.motor_controller.start_motor_x)
-        self.motor_stop_1 = create_btn(
+        self.motor_stop_1 = Button(
             SHRINK_X_LAVEL, self.motor_controller.stop_motor_x)
-        self.motor_reverse_1 = create_btn(
+        self.motor_reverse_1 = Button(
             REVERS_X_LAVEL, self.motor_controller.reverse_motor_x)
-        self.motor_start_2 = create_btn(
+        self.motor_start_2 = Button(
             ELONG_Y_LAVEL, self.motor_controller.start_motor_y)
-        self.motor_stop_2 = create_btn(
+        self.motor_stop_2 = Button(
             SHRINK_Y_LAVEL, self.motor_controller.stop_motor_y)
-        self.motor_reverse_2 = create_btn(
+        self.motor_reverse_2 = Button(
             REVERS_Y_LAVEL, self.motor_controller.reverse_motor_y)
 
         buttons = [
@@ -604,23 +604,23 @@ class MotorControlWidget(QWidget):
         button.setText(text2 if button.text() == text1 else text1)
 
 
-def create_btn(text, callback, is_enable=True):
-    """ボタンを生成する関数
+class Button(QPushButton):
+    """ボタンを生成するクラス
 
-    Arguments:
-        text -- ボタンテキスト
-        callback -- コールバック関数
-
-    Keyword Arguments:
-        enabled -- 押下可否 (default: {True})
-
-    Returns:
-        QPushButton ボタンオブジェクト
+    @Override QPushButton
     """
-    button = QPushButton(text)
-    button.clicked.connect(callback)
-    button.setEnabled(is_enable)
-    return button
+
+    def __init__(self, text, callback, is_enable=True):
+        """コンストラクタ
+
+        Arguments:
+            text -- ボタンテキスト
+            callback -- コールバック関数
+            is_enable -- 押下可否 (default: True)
+        """
+        super().__init__(text)
+        self.clicked.connect(callback)
+        self.setEnabled(is_enable)
 
 
 def main():
