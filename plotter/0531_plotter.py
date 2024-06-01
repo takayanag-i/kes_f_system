@@ -111,45 +111,6 @@ class SerialManager:
             return None
 
 
-class MotorController:
-    """モーターコントローラ
-    """
-    def __init__(self, serial_manager):
-        self.serial_manager = serial_manager
-
-    def start_motor_x(self):
-        self.serial_manager.write(MOTOR_X_START)
-        print("Motor x started")
-
-    def stop_motor_x(self):
-        self.serial_manager.write(MOTOR_X_STOP)
-        print("Motor x stopped")
-
-    def reverse_motor_x(self):
-        self.serial_manager.write(MOTOR_X_REVERSE)
-        if self.motor_start_1.text() == 'Xのばす':
-            self.motor_start_1.setText('X縮める')
-        else:
-            self.motor_start_1.setText('Xのばす')
-        print("Motor x reversed")
-
-    def start_motor_y(self):
-        self.serial_manager.write(MOTOR_Y_START)
-        print("Motor x started")
-
-    def stop_motor_y(self):
-        self.serial_manager.write(MOTOR_Y_STOP)
-        print("Motor x stopped")
-
-    def reverse_motor_y(self):
-        self.serial_manager.write(MOTOR_Y_REVERSE)
-        if self.motor_start_2.text() == 'Yのばす':
-            self.motor_start_2.setText('Y縮める')
-        else:
-            self.motor_start_2.setText('Yのばす')
-        print("Motor x reversed")
-
-
 class Window(QMainWindow):
     """メインウィンドウクラス
 
@@ -158,8 +119,8 @@ class Window(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        # モータコントローラのnew
-        self.motor_controller = MotorController(self.serial_manager)
+        self.serial_manager = SerialManager()  # シリアルマネージャのnew
+        self.motor_controller = MotorController(self.serial_manager, self)
         self.init_ui()
 
     def init_ui(self):
@@ -197,29 +158,29 @@ class Window(QMainWindow):
         self.plot_stop_button = self.create_button(
             'Stop', self.plot_stop_func, False
         )
-        self.restart_button = self.create_button(
+        self.plot_reset_button = self.create_button(
             'Reset', self.reset, False
         )
         self.exit_button = self.create_button('Exit', self.exit_func)
 
         self.motor_start_1 = self.create_button(
-            'Xのばす', lambda: self.motor_controller.start_motor_x
+            'Xのばす', self.motor_controller.start_motor_x
         )
         self.motor_stop_1 = self.create_button(
-            'Xとめる', lambda: self.motor_controller.stop_motor_x
+            'Xとめる', self.motor_controller.stop_motor_x
         )
         self.motor_reverse_1 = self.create_button(
-            'X逆回転', lambda: self.motor_controller.reverse_motor_x
+            'X逆回転', self.motor_controller.reverse_motor_x
         )
 
         self.motor_start_2 = self.create_button(
-            'Yのばす', lambda: self.motor_controller.start_motor_y
+            'Yのばす', self.motor_controller.start_motor_y
         )
         self.motor_stop_2 = self.create_button(
-            'Yとめる', lambda: self.motor_controller.stop_motor_y
+            'Yとめる', self.motor_controller.stop_motor_y
         )
         self.motor_reverse_2 = self.create_button(
-            'Y逆回転', lambda: self.motor_controller.reverse_motor_y
+            'Y逆回転', self.motor_controller.reverse_motor_y
         )
 
         dt = datetime.datetime.now()
@@ -261,7 +222,7 @@ class Window(QMainWindow):
         self.layout.addWidget(self.save_button, 2, 0)
         self.layout.addWidget(self.plot_start_button, 3, 0)
         self.layout.addWidget(self.plot_stop_button, 4, 0)
-        self.layout.addWidget(self.restart_button, 5, 0)
+        self.layout.addWidget(self.plot_reset_button, 5, 0)
         self.layout.addWidget(self.exit_button, 6, 0)
         # コンボボックス
         self.layout2.addWidget(self.combobox, 0, 0)
@@ -299,7 +260,6 @@ class Window(QMainWindow):
             呼び出し元のシグナルcurrentIndexChangedから受け取る
         """
         port_name = self.combobox.itemText(index)
-        self.serial_manager = SerialManager()  # シリアルマネージャのnew
         self.serial_manager.close_port()
         self.serial_manager.open_port(port_name)
         if self.serial_manager.ser.is_open:
@@ -331,10 +291,12 @@ class Window(QMainWindow):
             self.plot_start_button.setStyleSheet("")
             self.plot_start_button.setText('・・・')
             self.plot_stop_button.setStyleSheet(STYLE_REJECT)
-        except Exception:
+        except Exception as e:
             self.plot_start_button.setText('エラー！')
-        self.timer = QTimer()
+            self.message_box.setText(f"Error: {e}")
+        self.timer = QTimer(self)  # QTimerのインスタンスをここで初期化
         self.timer.timeout.connect(self.update)
+        self.num = 0
         self.timer.start(0)
 
     def plot_stop_func(self):
@@ -342,8 +304,8 @@ class Window(QMainWindow):
         self.plot_stop_button.setEnabled(False)
         self.plot_stop_button.setStyleSheet("")
         self.serial_manager.write(PLOT_STOP)
-        self.restart_button.setEnabled(True)
-        self.restart_button.setStyleSheet(STYLE)
+        self.plot_reset_button.setEnabled(True)
+        self.plot_reset_button.setStyleSheet(STYLE)
 
     def reset(self):
         self.plot_manager.reset_data()
@@ -353,54 +315,24 @@ class Window(QMainWindow):
         # !
 
     def update(self):
-        if self.num == 0:
-            input1 = self.serial_manager.read_serial_data()
-            input2 = self.serial_manager.read_serial_data()
-            if input1 and input2:
-                processed_data = self.plot_manager.process_data(input1, input2)
-                if processed_data:
-                    tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
-                    self.t0 = tmp6
-                    tmp6 = 0
-                    self.plot_manager.update_arrays(self, tmp1, tmp2, tmp3,
-                                                    tmp4, tmp5, tmp6)
-                    self.plot_manager.update_plts(self, tmp1, tmp2, tmp3,
-                                                  tmp4, tmp5, tmp6)
-                    self.num += 1
-            else:
-                self.num += 1
-        elif 0 < self.num < self.DATA_LENGTH:
-            input1 = self.serial_manager.read_serial_data(self.ser)
-            input2 = self.serial_manager.read_serial_data(self.ser)
-            if input1 and input2:
-                processed_data = self.plot_manager.process_data(input1, input2)
-                if processed_data:
-                    tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
-                    tmp6 -= self.t0
-                    self.plot_manager.update_arrays(self, tmp1, tmp2, tmp3,
-                                                    tmp4, tmp5, tmp6)
-                    if self.num % 5 == 0:
-                        self.plot_manager.update_plts(self, tmp1, tmp2, tmp3,
-                                                      tmp4, tmp5, tmp6)
-                    self.num += 1
-            else:
-                self.num += 1
-        else:
-            self.timer.stop()
+        input1 = self.serial_manager.read_serial_data()
+        input2 = self.serial_manager.read_serial_data()
 
-    # def parse_serial_data(self, line):
-    #     try:
-    #         parts = list(map(float, line.split(',')))
-    #         return {
-    #             't': parts[0],
-    #             'y1': parts[1],
-    #             'y2': parts[2],
-    #             'y3': parts[3],
-    #             'y4': parts[4],
-    #             'y5': parts[5],
-    #         }
-    #     except ValueError:
-    #         return None
+        if input1 and input2:
+            processed_data = self.plot_manager.process_data(input1, input2)
+            if processed_data:
+                tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
+                if self.num == 0:
+                    self.t0 = tmp6
+                tmp6 -= self.t0
+                self.plot_manager.update_arrays(tmp1, tmp2, tmp3,
+                                                tmp4, tmp5, tmp6)
+                if self.num % 5 == 0:
+                    self.plot_manager.update_plts(tmp1, tmp2, tmp3,
+                                                  tmp4, tmp5, tmp6)
+        self.num += 1
+        if self.num >= DATA_LENGTH:
+            self.timer.stop()
 
     def exit_func(self):
         self.serial_manager.close_port()
@@ -551,7 +483,7 @@ class PlotManager:
         self.y4_plt = np.array([])
         self.y5_plt = np.array([])
 
-    def process_data(input1, input2):
+    def process_data(self, input1, input2):
         """一時データの切り出しと加工"""
         try:
             tmp3, tmp4, tmp6 = input1.split(",")
@@ -589,19 +521,45 @@ class PlotManager:
         self.pw.curve4.setData(self.t_plt, self.y4_plt)
         self.pw.curve5.setData(self.t_plt, self.y5_plt)
 
-    # def update(self, new_data):
-    #     self.t_plt = np.append(self.t, new_data['t'])
-    #     self.y1_plt = np.append(self.y1, new_data['y1'])
-    #     self.y2_plt = np.append(self.y2, new_data['y2'])
-    #     self.y3_plt = np.append(self.y3, new_data['y3'])
-    #     self.y4_plt = np.append(self.y4, new_data['y4'])
-    #     self.y5_plt = np.append(self.y5, new_data['y5'])
 
-    #     self.pw.curve1.setData(self.t_plt, self.y1_plt)
-    #     self.pw.curve2.setData(self.t_plt, self.y2_plt)
-    #     self.pw.curve3.setData(self.t_plt, self.y3_plt)
-    #     self.pw.curve4.setData(self.t_plt, self.y4_plt)
-    #     self.pw.curve5.setData(self.t_plt, self.y5_plt)
+class MotorController:
+    """モーターコントローラ
+    """
+    def __init__(self, serial_manager, window: Window):
+        self.serial_manager = serial_manager
+        self.window = window
+
+    def start_motor_x(self):
+        self.serial_manager.write(MOTOR_X_START)
+        print("Motor x started")
+
+    def stop_motor_x(self):
+        self.serial_manager.write(MOTOR_X_STOP)
+        print("Motor x stopped")
+
+    def reverse_motor_x(self):
+        self.serial_manager.write(MOTOR_X_REVERSE)
+        if self.window.motor_start_1.text() == 'Xのばす':
+            self.window.motor_start_1.setText('X縮める')
+        else:
+            self.window.motor_start_1.setText('Xのばす')
+        print("Motor x reversed")
+
+    def start_motor_y(self):
+        self.serial_manager.write(MOTOR_Y_START)
+        print("Motor x started")
+
+    def stop_motor_y(self):
+        self.serial_manager.write(MOTOR_Y_STOP)
+        print("Motor x stopped")
+
+    def reverse_motor_y(self):
+        self.serial_manager.write(MOTOR_Y_REVERSE)
+        if self.window.motor_start_2.text() == 'Yのばす':
+            self.window.motor_start_2.setText('Y縮める')
+        else:
+            self.window.motor_start_2.setText('Yのばす')
+        print("Motor x reversed")
 
 
 def main():
