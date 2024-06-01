@@ -134,8 +134,7 @@ class SerialManager:
 class Window(QMainWindow):
     """メインウィンドウクラス
 
-    Arguments:
-        QMainWindow -- 親クラス
+    @Override QMainWindow
     """
     def __init__(self):
         super().__init__()
@@ -160,7 +159,7 @@ class Window(QMainWindow):
         """
         self.plot_widget = MultiAxisGraphWidget()
         self.plot_widget.setMinimumSize(800, 450)
-        self.plot_manager = PlotArrayHandler(self.plot_widget)
+        self.handler = PlotArrayHandler(self.plot_widget)
 
         self.widget_for_comport = QWidget()
         self.widget_for_comport.setMaximumHeight(160)
@@ -263,19 +262,19 @@ class Window(QMainWindow):
     def save_func(self):
         """データをCSVに保存する
         """
-        array = np.append(np.array([self.plot_manager.t,
-                                    self.plot_manager.y1,
-                                    self.plot_manager.y2,
-                                    self.plot_manager.y3,
-                                    self.plot_manager.y4,
-                                    self.plot_manager.y5]), axis=0)
+        array = np.append(np.array([self.handler.t,
+                                    self.handler.y1,
+                                    self.handler.y2,
+                                    self.handler.y3,
+                                    self.handler.y4,
+                                    self.handler.y5]), axis=0)
         array = array.T
         columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
         data = pd.DataFrame(array, columns=columns)
         data.to_csv(f"{self.line_edit.text()}.csv", index=False)
 
     def plot_start_func(self):
-        self.plot_manager.reset_data()
+        self.handler.reset_data()
         self.plot_stop_button.setEnabled(True)
         try:
             self.sm1.write(PLOT_START)
@@ -299,7 +298,7 @@ class Window(QMainWindow):
         self.plot_reset_button.setStyleSheet(STYLE)
 
     def reset(self):
-        self.plot_manager.reset_data()
+        self.handler.reset_data()
         self.plot_stop_button.setEnabled(False)
         self.plot_start_button.setEnabled(True)
         self.plot_start_button.setStyleSheet(STYLE)
@@ -309,17 +308,17 @@ class Window(QMainWindow):
         input2 = self.sm2.read_serial_data()
 
         if input1 and input2:
-            processed_data = self.plot_manager.process_data(input1, input2)
+            processed_data = self.handler.process_data(input1, input2)
             if processed_data:
                 tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
                 if self.num == 0:
                     self.t0 = tmp6
                 tmp6 -= self.t0
-                self.plot_manager.update_arrays(tmp1, tmp2, tmp3,
-                                                tmp4, tmp5, tmp6)
+                self.handler.update_arrays(tmp1, tmp2, tmp3,
+                                           tmp4, tmp5, tmp6)
                 if self.num % 5 == 0:
-                    self.plot_manager.update_plts(tmp1, tmp2, tmp3,
-                                                  tmp4, tmp5, tmp6)
+                    self.handler.update_plts(tmp1, tmp2, tmp3,
+                                             tmp4, tmp5, tmp6)
         self.num += 1
         if self.num >= DATA_LENGTH:
             self.timer.stop()
@@ -434,7 +433,7 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
 
 
 class PlotArrayHandler:
-    """プロットマネージャ
+    """プロットに使う配列のハンドリング
     """
     def __init__(self, plot_widget: MultiAxisGraphWidget):
         """コンストラクタ

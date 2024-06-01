@@ -1,0 +1,128 @@
+@startuml
+
+class Window {
+    - sm1: SerialManager
+    - sm2: SerialManager
+    - plot_widget: MultiAxisGraphWidget
+    - handler: PlotArrayHandler
+    - layout: QGridLayout
+    - widget_for_comport: QWidget
+    - layout2: QGridLayout
+    - motor_controller: MotorController
+    - save_button: Button
+    - plot_start_button: Button
+    - plot_stop_button: Button
+    - plot_reset_button: Button
+    - exit_button: Button
+    - line_edit: QLineEdit
+    - message_box: QLabel
+    - combobox1: QComboBox
+    - combobox2: QComboBox
+    - combobox1_label: QLabel
+    - combobox2_label: QLabel
+    + __init__()
+    + init_ui() : void
+    + create_widgets() : void
+    + arrange_widgets() : void
+    + get_serial_ports() : List[str]
+    + on_combobox1_changed(index: int) : void
+    + on_combobox2_changed(index: int) : void
+    + save_func() : void
+    + plot_start_func() : void
+    + plot_stop_func() : void
+    + reset() : void
+    + update() : void
+    + exit_func() : void
+}
+
+class MultiAxisGraphWidget {
+    - plot1: PlotItem
+    - curve1: PlotCurveItem
+    - curve2: PlotCurveItem
+    - curve3: PlotCurveItem
+    - curve4: PlotCurveItem
+    - curve5: PlotCurveItem
+    - view_box2: ViewBox
+    - view_box3: ViewBox
+    - view_box4: ViewBox
+    - view_box5: ViewBox
+    - ax5: AxisItem
+    - show: bool
+    - font: QFont
+    + __init__()
+    + set_graph_multiple_axis(plot1: PlotItem, view_box2: ViewBox, \n view_box3: ViewBox, view_box4: ViewBox, \n view_box5: ViewBox, ax5: AxisItem) : void
+    + set_graph_frame_font(p1: PlotItem, ax5: AxisItem) : void
+    + setup_labels() : void
+}
+
+class PlotArrayHandler {
+    - pw: MultiAxisGraphWidget
+    - t: np.array
+    - y1: np.array
+    - y2: np.array
+    - y3: np.array
+    - y4: np.array
+    - y5: np.array
+    - t_plt: np.array
+    - y1_plt: np.array
+    - y2_plt: np.array
+    - y3_plt: np.array
+    - y4_plt: np.array
+    - y5_plt: np.array
+    + __init__()
+    + reset_data() : void
+    + process_data(input1: str, input2: str) :\n  Tuple[float, float, float, float, float, float] or None
+    + update_arrays(tmp1: float, tmp2: float, \n tmp3: float, tmp4: float, tmp5: float, tmp6: float) : void
+    + update_plts(tmp1: float, tmp2: float, \n tmp3: float, tmp4: float, tmp5: float, tmp6: float) : void
+}
+
+class SerialManager {
+    - ser: serial.Serial
+    - baudrate: int
+    + __init__(baudrate: int)
+    + open_port(port: str) : void
+    + close_port() : void
+    + write(data: bytes) : void
+    + read_serial_data() : str
+}
+
+class MotorController {
+    - sm: SerialManager
+    + __init__(serial_manager: SerialManager)
+    + start_motor_x() : void
+    + stop_motor_x() : void
+    + reverse_motor_x() : void
+    + start_motor_y() : void
+    + stop_motor_y() : void
+    + reverse_motor_y() : void
+}
+
+class MotorControlWidget {
+    - motor_controller: MotorController
+    - motor_start_1: Button
+    - motor_stop_1: Button
+    - motor_reverse_1: Button
+    - motor_start_2: Button
+    - motor_stop_2: Button
+    - motor_reverse_2: Button
+    + __init__(motor_controller: MotorController)
+    + init_ui() : void
+    + init_signals() : void
+    + on_motor_x_reversed() : void
+    + on_motor_y_reversed() : void
+    + toggle_button_text(button: Button, text1: str, text2: str) : void
+}
+
+class Button {
+    + __init__(text: str, callback: function, is_enable: bool)
+}
+
+MultiAxisGraphWidget *-- ViewBox
+MultiAxisGraphWidget *-- AxisItem
+Window *-- SerialManager
+Window *-- MultiAxisGraphWidget
+Window *-- PlotArrayHandler
+Window *-- MotorController
+Window *-- MotorControlWidget
+
+@enduml
