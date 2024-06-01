@@ -154,7 +154,6 @@ class Window(QMainWindow):
         self.widget.setLayout(self.layout)
         self.create_widgets()
         self.arrange_widgets()
-        # self.show()
 
     def create_widgets(self):
         """ウィジェットの生成
@@ -222,7 +221,7 @@ class Window(QMainWindow):
         self.layout.addWidget(self.line_edit, 2, 1)
         self.layout.addWidget(self.message_box, 6, 1)
         # コントローラ
-        self.layout.addWidget(self.widget_for_controller, 2, 1, 4, 1)
+        self.layout.addWidget(self.widget_for_controller, 3, 1, 4, 1)
 
     def get_serial_ports(self):
         """接続可能なポート名を取得する
