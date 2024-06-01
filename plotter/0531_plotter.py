@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QMainWindow, QPushButton, QWidget,
                              QGraphicsWidget, QLineEdit, QGridLayout,
                              QApplication, QLabel, QComboBox)
 from PyQt6.QtGui import QFont
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, QObject, pyqtSignal
 import numpy as np
 import serial
 import pyqtgraph as pg
@@ -120,7 +120,6 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.serial_manager = SerialManager()  # シリアルマネージャのnew
-        self.motor_controller = MotorController(self.serial_manager, self)
         self.init_ui()
 
     def init_ui(self):
@@ -147,9 +146,9 @@ class Window(QMainWindow):
         self.layout2 = QGridLayout()
         self.widget_for_comport.setLayout(self.layout2)
 
-        self.widget_for_controller = QWidget()
-        self.layout3 = QGridLayout()
-        self.widget_for_controller.setLayout(self.layout3)
+        self.sender = CommandSender(self.serial_manager)
+        self.motor_controller = MotorController(self.sender)
+        self.widget_for_controller = MotorControlWidget(self.motor_controller)
 
         self.save_button = self.create_button('Save', self.save_func)
         self.plot_start_button = self.create_button(
@@ -162,26 +161,6 @@ class Window(QMainWindow):
             'Reset', self.reset, False
         )
         self.exit_button = self.create_button('Exit', self.exit_func)
-
-        self.motor_start_1 = self.create_button(
-            'Xのばす', self.motor_controller.start_motor_x
-        )
-        self.motor_stop_1 = self.create_button(
-            'Xとめる', self.motor_controller.stop_motor_x
-        )
-        self.motor_reverse_1 = self.create_button(
-            'X逆回転', self.motor_controller.reverse_motor_x
-        )
-
-        self.motor_start_2 = self.create_button(
-            'Yのばす', self.motor_controller.start_motor_y
-        )
-        self.motor_stop_2 = self.create_button(
-            'Yとめる', self.motor_controller.stop_motor_y
-        )
-        self.motor_reverse_2 = self.create_button(
-            'Y逆回転', self.motor_controller.reverse_motor_y
-        )
 
         dt = datetime.datetime.now()
         line_text = dt.strftime('%Y-%m%d-%H%M-プロジェクト名')
@@ -231,14 +210,6 @@ class Window(QMainWindow):
         self.layout.addWidget(self.message_box, 6, 1)
         # コントローラ
         self.layout.addWidget(self.widget_for_controller, 2, 1, 4, 1)
-
-        # コントローラへの追加
-        self.layout3.addWidget(self.motor_start_1, 0, 0)
-        self.layout3.addWidget(self.motor_stop_1, 0, 1)
-        self.layout3.addWidget(self.motor_reverse_1, 0, 2)
-        self.layout3.addWidget(self.motor_start_2, 1, 0)
-        self.layout3.addWidget(self.motor_stop_2, 1, 1)
-        self.layout3.addWidget(self.motor_reverse_2, 1, 2)
 
     def get_serial_ports(self):
         """接続可能なポート名を取得する
@@ -522,47 +493,116 @@ class PlotManager:
         self.pw.curve5.setData(self.t_plt, self.y5_plt)
 
 
-class MotorController:
-    """モーターコントローラ
-    """
-    def __init__(self, serial_manager, window: Window):
-        self.serial_manager = serial_manager
-        self.window = window
+class MotorController(QObject):
+    """モーターコントローラ"""
+    on_motor_x_reversed = pyqtSignal()
+    on_motor_y_reversed = pyqtSignal()
+
+    def __init__(self, command_sender):
+        """
+        コンストラクタ
+        :param command_sender: コマンド送信オブジェクト
+        """
+        super().__init__()
+        self.command_sender = command_sender
+
+    def _send_command(self, command, message):
+        """コマンドを送信してメッセージを表示"""
+        self.command_sender.send(command)
+        print(message)
 
     def start_motor_x(self):
-        self.serial_manager.write(MOTOR_X_START)
-        print("Motor x started")
+        """X軸モーターを開始する"""
+        self._send_command(MOTOR_X_START, "Motor x started")
 
     def stop_motor_x(self):
-        self.serial_manager.write(MOTOR_X_STOP)
-        print("Motor x stopped")
+        """X軸モーターを停止する"""
+        self._send_command(MOTOR_X_STOP, "Motor x stopped")
 
     def reverse_motor_x(self):
-        self.serial_manager.write(MOTOR_X_REVERSE)
-        if self.window.motor_start_1.text() == 'Xのばす':
-            self.window.motor_start_1.setText('X縮める')
-        else:
-            self.window.motor_start_1.setText('Xのばす')
-        print("Motor x reversed")
+        """X軸モーターの回転を反転する"""
+        self._send_command(MOTOR_X_REVERSE, "Motor x reversed")
+        self.on_motor_x_reversed.emit()
 
     def start_motor_y(self):
-        self.serial_manager.write(MOTOR_Y_START)
-        print("Motor x started")
+        """Y軸モーターを開始する"""
+        self._send_command(MOTOR_Y_START, "Motor y started")
 
     def stop_motor_y(self):
-        self.serial_manager.write(MOTOR_Y_STOP)
-        print("Motor x stopped")
+        """Y軸モーターを停止する"""
+        self._send_command(MOTOR_Y_STOP, "Motor y stopped")
 
     def reverse_motor_y(self):
-        self.serial_manager.write(MOTOR_Y_REVERSE)
-        if self.window.motor_start_2.text() == 'Yのばす':
-            self.window.motor_start_2.setText('Y縮める')
-        else:
-            self.window.motor_start_2.setText('Yのばす')
-        print("Motor x reversed")
+        """Y軸モーターの回転を反転する"""
+        self._send_command(MOTOR_Y_REVERSE, "Motor y reversed")
+        self.on_motor_y_reversed.emit()
+
+
+class CommandSender:
+    """コマンド送信クラス"""
+    def __init__(self, serial_manager):
+        self.serial_manager = serial_manager
+
+    def send(self, command):
+        """コマンドを送信する"""
+        self.serial_manager.write(command)
+
+
+class MotorControlWidget(QWidget):
+    """モーターコントロールウィジェット"""
+    def __init__(self, motor_controller):
+        """コンストラクタ"""
+        super().__init__()
+        self.motor_controller = motor_controller
+        self.init_ui()
+        self.init_signals()
+
+    def init_ui(self):
+        """UIの初期化"""
+        layout = QGridLayout(self)
+
+        self.motor_start_1 = self.create_btn('Xのばす', self.motor_controller.start_motor_x)
+        self.motor_stop_1 = self.create_btn('Xとめる', self.motor_controller.stop_motor_x)
+        self.motor_reverse_1 = self.create_btn('X逆回転', self.motor_controller.reverse_motor_x)
+        self.motor_start_2 = self.create_btn('Yのばす', self.motor_controller.start_motor_y)
+        self.motor_stop_2 = self.create_btn('Yとめる', self.motor_controller.stop_motor_y)
+        self.motor_reverse_2 = self.create_btn('Y逆回転', self.motor_controller.reverse_motor_y)
+
+        buttons = [
+            (self.motor_start_1, 0, 0), (self.motor_stop_1, 0, 1), (self.motor_reverse_1, 0, 2),
+            (self.motor_start_2, 1, 0), (self.motor_stop_2, 1, 1), (self.motor_reverse_2, 1, 2)
+        ]
+
+        for btn, row, col in buttons:
+            layout.addWidget(btn, row, col)
+
+    def create_btn(self, text, callback):
+        """ボタンを生成する関数"""
+        button = QPushButton(text)
+        button.clicked.connect(callback)
+        return button
+
+    def init_signals(self):
+        """シグナルの初期化"""
+        self.motor_controller.on_motor_x_reversed.connect(self.on_motor_x_reversed)
+        self.motor_controller.on_motor_y_reversed.connect(self.on_motor_y_reversed)
+
+    def on_motor_x_reversed(self):
+        """motor_x_reversedに対するスロットメソッド"""
+        self.toggle_button_text(self.motor_start_1, 'Xのばす', 'X縮める')
+
+    def on_motor_y_reversed(self):
+        """motor_y_reversedに対するスロットメソッド"""
+        self.toggle_button_text(self.motor_start_2, 'Yのばす', 'Y縮める')
+
+    def toggle_button_text(self, button, text1, text2):
+        """ボタンのテキストを切り替える"""
+        button.setText(text2 if button.text() == text1 else text1)
 
 
 def main():
+    """メイン関数
+    """
     app = QApplication(sys.argv)
     window = Window()
     window.show()
