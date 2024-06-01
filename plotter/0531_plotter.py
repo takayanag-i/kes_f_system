@@ -186,7 +186,7 @@ class Window(QMainWindow):
         dt = datetime.datetime.now()
         line_text = dt.strftime('%Y-%m%d-%H%M-プロジェクト名')
         self.line_edit = QLineEdit(line_text)
-        # self.line_edit.setEnabled(True)
+        # self.line_edit.setFocus()
         self.line_edit.setFont(QFont(FONT_FAMILY, FONT_SIZE))
 
         self.message_box = QLabel('シリアルポートを選択してください')
