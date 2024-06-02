@@ -1,5 +1,5 @@
 import sys
-import datetime
+import datetime as dt
 
 from PyQt6.QtWidgets import (QMainWindow, QPushButton, QWidget,
                              QGraphicsWidget, QLineEdit, QGridLayout,
@@ -41,6 +41,9 @@ REVERS_X_LAVEL = 'X逆回転'
 ELONG_Y_LAVEL = 'Yのばす'
 SHRINK_Y_LAVEL = 'Y縮める'
 REVERS_Y_LAVEL = 'Y逆回転'
+
+# テキスト
+DATE_FMT = '%Y-%m%d-%H%M-プロジェクト名'
 
 # フォント
 FONT_FAMILY = 'Arial'
@@ -134,14 +137,17 @@ class SerialManager:
 class Window(QMainWindow):
     """メインウィンドウクラス
 
-    Arguments:
-        QMainWindow -- 親クラス
+    @Override QMainWindow
     """
     def __init__(self):
         super().__init__()
+
         self.sm1 = SerialManager()
         self.sm2 = SerialManager()
+        self.motor_controller = MotorController(self.sm1)
         self.init_ui()
+
+        self.handler = PlotArrayHandler(self.plot_widget)
 
     def init_ui(self):
         """UIの初期化
@@ -154,55 +160,52 @@ class Window(QMainWindow):
         self.widget.setLayout(self.layout)
         self.create_widgets()
         self.arrange_widgets()
+        self.layout_widgets()
 
     def create_widgets(self):
         """ウィジェットの生成
         """
         self.plot_widget = MultiAxisGraphWidget()
-        self.plot_widget.setMinimumSize(800, 450)
-        self.plot_manager = PlotArrayHandler(self.plot_widget)
 
         self.widget_for_comport = QWidget()
-        self.widget_for_comport.setMaximumHeight(160)
-        self.layout2 = QGridLayout()
-        self.widget_for_comport.setLayout(self.layout2)
-
-        self.motor_controller = MotorController(self.sm1)  # 1つ目のシリアルポートを使う
         self.widget_for_controller = MotorControlWidget(self.motor_controller)
 
-        self.save_button = create_btn('Save', self.save_func)
-        self.plot_start_button = create_btn(
-            'Start', self.plot_start_func, False
-        )
-        self.plot_stop_button = create_btn(
-            'Stop', self.plot_stop_func, False
-        )
-        self.plot_reset_button = create_btn(
-            'Reset', self.reset, False
-        )
-        self.exit_button = create_btn('Exit', self.exit_func)
+        # ボタン
+        self.save_button = Button('Save', self.save_func)
+        self.plot_start_button = Button('Start', self.plot_start_func, False)
+        self.plot_stop_button = Button('Stop', self.plot_stop_func, False)
+        self.plot_reset_button = Button('Reset', self.reset, False)
+        self.exit_button = Button('Exit', self.exit_func)
 
-        dt = datetime.datetime.now()
-        line_text = dt.strftime('%Y-%m%d-%H%M-プロジェクト名')
-        self.line_edit = QLineEdit(line_text)
-        # self.line_edit.setFocus()
-        self.line_edit.setFont(QFont(FONT_FAMILY, FONT_SIZE))
-
+        # テキストエリア
+        self.line_edit = QLineEdit(dt.datetime.now().strftime(DATE_FMT))
         self.message_box = QLabel('シリアルポートを選択してください')
 
+        # コンボボックス
         self.combobox1 = QComboBox()
+        self.combobox2 = QComboBox()
+
+    def arrange_widgets(self):
+        """ウィジェットの操作
+        """
+        self.plot_widget.setMinimumSize(800, 450)
+        self.widget_for_comport.setMaximumHeight(160)
+        self.line_edit.setFont(QFont(FONT_FAMILY, FONT_SIZE))
+
+        # コンボボックス
         self.combobox1.addItems(self.get_serial_ports())
         self.combobox1.currentIndexChanged.connect(self.on_combobox1_changed)
         self.combobox1_label = QLabel('COM Port : ESP32 Dev Module')
 
-        self.combobox2 = QComboBox()
         self.combobox2.addItems(self.get_serial_ports())
         self.combobox2.currentIndexChanged.connect(self.on_combobox2_changed)
         self.combobox2_label = QLabel('COM Port : RP2040 Xiao')
 
-    def arrange_widgets(self):
+    def layout_widgets(self):
         """部品をレイアウトに追加
         """
+        self.layout2 = QGridLayout()
+        self.widget_for_comport.setLayout(self.layout2)
         # ウィジェット
         self.layout.addWidget(self.plot_widget, 0, 1)
         self.layout.addWidget(self.widget_for_comport, 0, 0)
@@ -263,19 +266,19 @@ class Window(QMainWindow):
     def save_func(self):
         """データをCSVに保存する
         """
-        array = np.append(np.array([self.plot_manager.t,
-                                    self.plot_manager.y1,
-                                    self.plot_manager.y2,
-                                    self.plot_manager.y3,
-                                    self.plot_manager.y4,
-                                    self.plot_manager.y5]), axis=0)
+        array = np.append(np.array([self.handler.t,
+                                    self.handler.y1,
+                                    self.handler.y2,
+                                    self.handler.y3,
+                                    self.handler.y4,
+                                    self.handler.y5]), axis=0)
         array = array.T
         columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
         data = pd.DataFrame(array, columns=columns)
         data.to_csv(f"{self.line_edit.text()}.csv", index=False)
 
     def plot_start_func(self):
-        self.plot_manager.reset_data()
+        self.handler.reset_data()
         self.plot_stop_button.setEnabled(True)
         try:
             self.sm1.write(PLOT_START)
@@ -299,7 +302,7 @@ class Window(QMainWindow):
         self.plot_reset_button.setStyleSheet(STYLE)
 
     def reset(self):
-        self.plot_manager.reset_data()
+        self.handler.reset_data()
         self.plot_stop_button.setEnabled(False)
         self.plot_start_button.setEnabled(True)
         self.plot_start_button.setStyleSheet(STYLE)
@@ -309,17 +312,17 @@ class Window(QMainWindow):
         input2 = self.sm2.read_serial_data()
 
         if input1 and input2:
-            processed_data = self.plot_manager.process_data(input1, input2)
+            processed_data = self.handler.process_data(input1, input2)
             if processed_data:
                 tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
                 if self.num == 0:
                     self.t0 = tmp6
                 tmp6 -= self.t0
-                self.plot_manager.update_arrays(tmp1, tmp2, tmp3,
-                                                tmp4, tmp5, tmp6)
+                self.handler.update_arrays(tmp1, tmp2, tmp3,
+                                           tmp4, tmp5, tmp6)
                 if self.num % 5 == 0:
-                    self.plot_manager.update_plts(tmp1, tmp2, tmp3,
-                                                  tmp4, tmp5, tmp6)
+                    self.handler.update_plts(tmp1, tmp2, tmp3,
+                                             tmp4, tmp5, tmp6)
         self.num += 1
         if self.num >= DATA_LENGTH:
             self.timer.stop()
@@ -434,7 +437,7 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
 
 
 class PlotArrayHandler:
-    """プロットマネージャ
+    """プロットに使う配列のハンドリング
     """
     def __init__(self, plot_widget: MultiAxisGraphWidget):
         """コンストラクタ
@@ -492,7 +495,7 @@ class PlotArrayHandler:
         self.y4_plt = np.append(self.y4_plt, tmp4)
         self.y5_plt = np.append(self.y5_plt, tmp5)
         self.t_plt = np.append(self.t_plt, tmp6)
-        self.pw.curve1.setData(self.t_plt, self.y1_plt)
+        self.pw.curve1.setData(self.t_plt, self.y1_plt)  # ! returnする？？
         self.pw.curve2.setData(self.t_plt, self.y2_plt)
         self.pw.curve3.setData(self.t_plt, self.y3_plt)
         self.pw.curve4.setData(self.t_plt, self.y4_plt)
@@ -557,17 +560,17 @@ class MotorControlWidget(QWidget):
         """UIの初期化"""
         layout = QGridLayout(self)
 
-        self.motor_start_1 = create_btn(
+        self.motor_start_1 = Button(
             ELONG_X_LAVEL, self.motor_controller.start_motor_x)
-        self.motor_stop_1 = create_btn(
+        self.motor_stop_1 = Button(
             SHRINK_X_LAVEL, self.motor_controller.stop_motor_x)
-        self.motor_reverse_1 = create_btn(
+        self.motor_reverse_1 = Button(
             REVERS_X_LAVEL, self.motor_controller.reverse_motor_x)
-        self.motor_start_2 = create_btn(
+        self.motor_start_2 = Button(
             ELONG_Y_LAVEL, self.motor_controller.start_motor_y)
-        self.motor_stop_2 = create_btn(
+        self.motor_stop_2 = Button(
             SHRINK_Y_LAVEL, self.motor_controller.stop_motor_y)
-        self.motor_reverse_2 = create_btn(
+        self.motor_reverse_2 = Button(
             REVERS_Y_LAVEL, self.motor_controller.reverse_motor_y)
 
         buttons = [
@@ -604,23 +607,23 @@ class MotorControlWidget(QWidget):
         button.setText(text2 if button.text() == text1 else text1)
 
 
-def create_btn(text, callback, is_enable=True):
-    """ボタンを生成する関数
+class Button(QPushButton):
+    """ボタンを生成するクラス
 
-    Arguments:
-        text -- ボタンテキスト
-        callback -- コールバック関数
-
-    Keyword Arguments:
-        enabled -- 押下可否 (default: {True})
-
-    Returns:
-        QPushButton ボタンオブジェクト
+    @Override QPushButton
     """
-    button = QPushButton(text)
-    button.clicked.connect(callback)
-    button.setEnabled(is_enable)
-    return button
+
+    def __init__(self, text, callback, is_enable=True):
+        """コンストラクタ
+
+        Arguments:
+            text -- ボタンテキスト
+            callback -- コールバック関数
+            is_enable -- 押下可否 (default: True)
+        """
+        super().__init__(text)
+        self.clicked.connect(callback)
+        self.setEnabled(is_enable)
 
 
 def main():
