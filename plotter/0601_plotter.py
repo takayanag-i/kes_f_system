@@ -1,120 +1,16 @@
 import sys
-import datetime as dt
 
-from PyQt6.QtWidgets import (QMainWindow, QWidget, QLineEdit, QGridLayout,
-                             QApplication, QLabel, QComboBox)
-from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
 import numpy as np
 import pandas as pd
-import serial.tools.list_ports
 
-from pkgs.common.button import Button
-from pkgs.common.constants import (Styles,
-                                   Formats as fmt,
-                                   Commands as cmd,
-                                   FontConfig as fnt,
+from pkgs.common.constants import (Styles, Commands as cmd,
                                    ArithmeticConstants as const)
 from pkgs.util.serial_manager import SerialManager
 from pkgs.util.motor_controller import MotorController
-from pkgs.gui.multi_axis_graph import MultiAxisGraphWidget
-from pkgs.gui.motor_ctrl_widget import MotorControlWidget
 from pkgs.util.plot_array_handler import PlotArrayHandler
-
-
-class Window(QMainWindow):
-    """メインウィンドウクラス
-
-    @Override QMainWindow
-    """
-    def __init__(self, executor):
-        super().__init__()
-
-        self.executor = executor
-        self.executor.set_window(self)
-        self.init_ui()
-
-    def init_ui(self):
-        """UIの初期化
-        """
-        self.setWindowTitle("KES-F System")
-        self.setGeometry(100, 100, 800, 450)
-        self.widget = QWidget()
-        self.setCentralWidget(self.widget)
-        self.layout = QGridLayout()
-        self.widget.setLayout(self.layout)
-        self.create_widgets()
-        self.arrange_widgets()
-        self.layout_widgets()
-
-    def create_widgets(self):
-        """ウィジェットの生成
-        """
-        self.plot_widget = MultiAxisGraphWidget()
-
-        self.widget_for_comport = QWidget()
-        self.widget_for_controller = MotorControlWidget(
-            self.executor.motor_controller)
-
-        # ボタン
-        self.save_button = Button('Save', self.executor.save_func)
-        self.plot_start_button = Button('Start',
-                                        self.executor.plot_start_func, False)
-        self.plot_stop_button = Button('Stop',
-                                       self.executor.plot_stop_func, False)
-        self.plot_reset_button = Button('Reset', self.executor.reset, False)
-        self.exit_button = Button('Exit', self.executor.exit_func)
-
-        # テキストエリア
-        self.line_edit = QLineEdit(dt.datetime.now().strftime(fmt.DATE_FMT))
-        self.message_box = QLabel('シリアルポートを選択してください')
-
-        # コンボボックス
-        self.combobox1 = QComboBox()
-        self.combobox2 = QComboBox()
-
-    def arrange_widgets(self):
-        """ウィジェットの操作
-        """
-        self.plot_widget.setMinimumSize(800, 450)
-        self.widget_for_comport.setMaximumHeight(160)
-        self.line_edit.setFont(QFont(fnt.FONT_FAMILY, fnt.FONT_SIZE))
-
-        # コンボボックス
-        self.combobox1.addItems(self.executor.get_serial_ports())
-        self.combobox1.currentIndexChanged.connect(
-            self.executor.on_combobox1_changed)
-        self.combobox1_label = QLabel('COM Port : ESP32 Dev Module')
-
-        self.combobox2.addItems(self.executor.get_serial_ports())
-        self.combobox2.currentIndexChanged.connect(
-            self.executor.on_combobox2_changed)
-        self.combobox2_label = QLabel('COM Port : RP2040 Xiao')
-
-    def layout_widgets(self):
-        """部品をレイアウトに追加
-        """
-        self.layout2 = QGridLayout()
-        self.widget_for_comport.setLayout(self.layout2)
-        # ウィジェット
-        self.layout.addWidget(self.plot_widget, 0, 1)
-        self.layout.addWidget(self.widget_for_comport, 0, 0)
-        # ボタン
-        self.layout.addWidget(self.save_button, 2, 0)
-        self.layout.addWidget(self.plot_start_button, 3, 0)
-        self.layout.addWidget(self.plot_stop_button, 4, 0)
-        self.layout.addWidget(self.plot_reset_button, 5, 0)
-        self.layout.addWidget(self.exit_button, 6, 0)
-        # コンボボックス
-        self.layout2.addWidget(self.combobox1_label, 0, 0)
-        self.layout2.addWidget(self.combobox1, 1, 0)
-        self.layout2.addWidget(self.combobox2_label, 2, 0)
-        self.layout2.addWidget(self.combobox2, 3, 0)
-        # テキストエリア
-        self.layout.addWidget(self.line_edit, 2, 1)
-        self.layout.addWidget(self.message_box, 6, 1)
-        # コントローラ
-        self.layout.addWidget(self.widget_for_controller, 3, 1, 4, 1)
+from pkgs.gui.main_window import Window
 
 
 class Executor:
@@ -124,17 +20,14 @@ class Executor:
         self.motor_controller = MotorController(self.sm1)
         self.handler = PlotArrayHandler()
 
-    def set_window(self, window):
-        self.window = window
+        self.window = Window()
 
-    def get_serial_ports(self):
-        """接続可能なポート名を取得する
+        self.window.combobox1\
+            .currentIndexChanged.connect(self.on_combobox1_changed)
+        self.window.combobox2\
+            .currentIndexChanged.connect(self.on_combobox2_changed)
 
-        Returns:
-            ポート名のリスト
-        """
-        ports = serial.tools.list_ports.comports()
-        return [port.device for port in ports]
+        self.set_buttons_listner()
 
     def on_combobox1_changed(self, index):
         """コンボボックスの値が変更されたときの処理.
@@ -152,9 +45,6 @@ class Executor:
         if self.sm1.ser and self.sm1.ser.is_open:
             self.window.message_box\
                 .setText(f"Connected to {port_name}")
-        else:
-            self.window.message_box\
-                .setText(f"Failed to connect to {port_name}")
 
     def on_combobox2_changed(self, index):
         """上に同じ"""
@@ -164,9 +54,26 @@ class Executor:
         if self.sm2.ser and self.sm2.ser.is_open:
             self.window.message_box\
                 .setText(f"Connected to {port_name}")
-        else:
-            self.window.message_box\
-                .setText(f"Failed to connect to {port_name}")
+
+    def set_buttons_listner(self):
+        self.window.save_button.set_callback(self.save_func)
+        self.window.plot_start_button.set_callback(self.plot_start)
+        self.window.plot_stop_button.set_callback(self.plot_stop)
+        self.window.plot_reset_button.set_callback(self.reset)
+        self.window.exit_button.set_callback(self.exit)
+
+        self.window.widget_for_controller.motor_start_1.set_callback(
+            self.motor_controller.start_motor_x)
+        self.window.widget_for_controller.motor_stop_1.set_callback(
+            self.motor_controller.stop_motor_x)
+        self.window.widget_for_controller.motor_reverse_1.set_callback(
+            self.motor_controller.reverse_motor_x)
+        self.window.widget_for_controller.motor_start_2.set_callback(
+            self.motor_controller.start_motor_y)
+        self.window.widget_for_controller.motor_stop_2.set_callback(
+            self.motor_controller.stop_motor_y)
+        self.window.widget_for_controller.motor_reverse_2.set_callback(
+            self.motor_controller.reverse_motor_y)
 
     def save_func(self):
         """データをCSVに保存する
@@ -182,7 +89,7 @@ class Executor:
         data = pd.DataFrame(array, columns=columns)
         data.to_csv(f"{self.window.line_edit.text()}.csv", index=False)
 
-    def plot_start_func(self):
+    def plot_start(self):
         self.handler.reset_data()
         self.window.plot_stop_button.setEnabled(True)
         try:
@@ -198,7 +105,7 @@ class Executor:
         self.num = 0
         self.timer.start(0)
 
-    def plot_stop_func(self):
+    def plot_stop(self):
         self.timer.stop()
         self.window.plot_stop_button.setEnabled(False)
         self.window.plot_stop_button.setStyleSheet("")
@@ -238,7 +145,7 @@ class Executor:
         if self.num >= const.DATA_LENGTH:
             self.timer.stop()
 
-    def exit_func(self):
+    def exit(self):
         self.sm1.close_port()
         self.sm2.close_port()
         self.window.close()
@@ -248,8 +155,7 @@ def main():
     """メイン関数"""
     app = QApplication(sys.argv)
     executor = Executor()
-    window = Window(executor)
-    window.show()
+    executor.window.show()
     sys.exit(app.exec())
 
 

@@ -7,33 +7,26 @@ from ..common.button import Button
 
 class MotorControlWidget(QWidget):
     """モーターコントロールウィジェット"""
-    def __init__(self, motor_controller: MotorController):
+    def __init__(self):
         """コンストラクタ
 
         Arguments:
             motor_controller -- MotorControllerオブジェクト
         """
         super().__init__()
-        self.motor_controller = motor_controller
+        self.motor_controller = None
         self.init_ui()
-        self.init_signals()
 
     def init_ui(self):
         """UIの初期化"""
         layout = QGridLayout(self)
 
-        self.motor_start_1 = Button(
-            lvl.ELONG_X_LAVEL, self.motor_controller.start_motor_x)
-        self.motor_stop_1 = Button(
-            lvl.SHRINK_X_LAVEL, self.motor_controller.stop_motor_x)
-        self.motor_reverse_1 = Button(
-            lvl.REVERS_X_LAVEL, self.motor_controller.reverse_motor_x)
-        self.motor_start_2 = Button(
-            lvl.ELONG_Y_LAVEL, self.motor_controller.start_motor_y)
-        self.motor_stop_2 = Button(
-            lvl.SHRINK_Y_LAVEL, self.motor_controller.stop_motor_y)
-        self.motor_reverse_2 = Button(
-            lvl.REVERS_Y_LAVEL, self.motor_controller.reverse_motor_y)
+        self.motor_start_1 = Button(lvl.ELONG_X_LAVEL)
+        self.motor_stop_1 = Button(lvl.SHRINK_X_LAVEL)
+        self.motor_reverse_1 = Button(lvl.REVERS_X_LAVEL)
+        self.motor_start_2 = Button(lvl.ELONG_Y_LAVEL)
+        self.motor_stop_2 = Button(lvl.SHRINK_Y_LAVEL)
+        self.motor_reverse_2 = Button(lvl.REVERS_Y_LAVEL)
 
         buttons = [
             (self.motor_start_1, 0, 0),
@@ -67,3 +60,20 @@ class MotorControlWidget(QWidget):
     def toggle_button_text(self, button, text1, text2):
         """ボタンのテキストを切り替える"""
         button.setText(text2 if button.text() == text1 else text1)
+
+    def set_motor_controller(self, motor_controller: MotorController):
+        """MotorControllerオブジェクトをセットする
+
+        Arguments:
+            motor_controller -- MotorControllerオブジェクト
+        """
+        if self.motor_controller is not None:
+            self.throw_motor_ctrl_error()
+            return
+
+        self.motor_controller = motor_controller
+        self.init_signals()
+
+    def throw_motor_ctrl_error(self):
+        """MotorControllerが既にセットされているときエラー"""
+        raise ValueError("MotorController has already been set")
