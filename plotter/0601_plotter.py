@@ -1,5 +1,5 @@
 import sys
-import datetime
+import datetime as dt
 
 from PyQt6.QtWidgets import (QMainWindow, QPushButton, QWidget,
                              QGraphicsWidget, QLineEdit, QGridLayout,
@@ -41,6 +41,9 @@ REVERS_X_LAVEL = 'X逆回転'
 ELONG_Y_LAVEL = 'Yのばす'
 SHRINK_Y_LAVEL = 'Y縮める'
 REVERS_Y_LAVEL = 'Y逆回転'
+
+# テキスト
+DATE_FMT = '%Y-%m%d-%H%M-プロジェクト名'
 
 # フォント
 FONT_FAMILY = 'Arial'
@@ -138,9 +141,13 @@ class Window(QMainWindow):
     """
     def __init__(self):
         super().__init__()
+
         self.sm1 = SerialManager()
         self.sm2 = SerialManager()
+        self.motor_controller = MotorController(self.sm1)
         self.init_ui()
+
+        self.handler = PlotArrayHandler(self.plot_widget)
 
     def init_ui(self):
         """UIの初期化
@@ -153,55 +160,52 @@ class Window(QMainWindow):
         self.widget.setLayout(self.layout)
         self.create_widgets()
         self.arrange_widgets()
+        self.layout_widgets()
 
     def create_widgets(self):
         """ウィジェットの生成
         """
         self.plot_widget = MultiAxisGraphWidget()
-        self.plot_widget.setMinimumSize(800, 450)
-        self.handler = PlotArrayHandler(self.plot_widget)
 
         self.widget_for_comport = QWidget()
-        self.widget_for_comport.setMaximumHeight(160)
-        self.layout2 = QGridLayout()
-        self.widget_for_comport.setLayout(self.layout2)
-
-        self.motor_controller = MotorController(self.sm1)  # 1つ目のシリアルポートを使う
         self.widget_for_controller = MotorControlWidget(self.motor_controller)
 
+        # ボタン
         self.save_button = Button('Save', self.save_func)
-        self.plot_start_button = Button(
-            'Start', self.plot_start_func, False
-        )
-        self.plot_stop_button = Button(
-            'Stop', self.plot_stop_func, False
-        )
-        self.plot_reset_button = Button(
-            'Reset', self.reset, False
-        )
+        self.plot_start_button = Button('Start', self.plot_start_func, False)
+        self.plot_stop_button = Button('Stop', self.plot_stop_func, False)
+        self.plot_reset_button = Button('Reset', self.reset, False)
         self.exit_button = Button('Exit', self.exit_func)
 
-        dt = datetime.datetime.now()
-        line_text = dt.strftime('%Y-%m%d-%H%M-プロジェクト名')
-        self.line_edit = QLineEdit(line_text)
-        # self.line_edit.setFocus()
-        self.line_edit.setFont(QFont(FONT_FAMILY, FONT_SIZE))
-
+        # テキストエリア
+        self.line_edit = QLineEdit(dt.datetime.now().strftime(DATE_FMT))
         self.message_box = QLabel('シリアルポートを選択してください')
 
+        # コンボボックス
         self.combobox1 = QComboBox()
+        self.combobox2 = QComboBox()
+
+    def arrange_widgets(self):
+        """ウィジェットの操作
+        """
+        self.plot_widget.setMinimumSize(800, 450)
+        self.widget_for_comport.setMaximumHeight(160)
+        self.line_edit.setFont(QFont(FONT_FAMILY, FONT_SIZE))
+
+        # コンボボックス
         self.combobox1.addItems(self.get_serial_ports())
         self.combobox1.currentIndexChanged.connect(self.on_combobox1_changed)
         self.combobox1_label = QLabel('COM Port : ESP32 Dev Module')
 
-        self.combobox2 = QComboBox()
         self.combobox2.addItems(self.get_serial_ports())
         self.combobox2.currentIndexChanged.connect(self.on_combobox2_changed)
         self.combobox2_label = QLabel('COM Port : RP2040 Xiao')
 
-    def arrange_widgets(self):
+    def layout_widgets(self):
         """部品をレイアウトに追加
         """
+        self.layout2 = QGridLayout()
+        self.widget_for_comport.setLayout(self.layout2)
         # ウィジェット
         self.layout.addWidget(self.plot_widget, 0, 1)
         self.layout.addWidget(self.widget_for_comport, 0, 0)
@@ -491,7 +495,7 @@ class PlotArrayHandler:
         self.y4_plt = np.append(self.y4_plt, tmp4)
         self.y5_plt = np.append(self.y5_plt, tmp5)
         self.t_plt = np.append(self.t_plt, tmp6)
-        self.pw.curve1.setData(self.t_plt, self.y1_plt)
+        self.pw.curve1.setData(self.t_plt, self.y1_plt)  # ! returnする？？
         self.pw.curve2.setData(self.t_plt, self.y2_plt)
         self.pw.curve3.setData(self.t_plt, self.y3_plt)
         self.pw.curve4.setData(self.t_plt, self.y4_plt)
