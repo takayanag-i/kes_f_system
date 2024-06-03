@@ -103,5 +103,6 @@ class Window(QMainWindow):
         """
         ports = serial.tools.list_ports.comports()
         port_list = [port.device for port in ports]
+        # port_list = ['/dev/ttys45', '/dev/ttys46']
         port_list.insert(0, '---')
         return port_list
