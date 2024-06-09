@@ -6,11 +6,11 @@ const uint8_t STEP2 = 22;
 int sign1, sign2;
 volatile float disp1, disp2 = 0.0;
 volatile uint8_t serialin;
-volatile uint8_t mot;
+volatile uint8_t cmd;
 
 void setup() {
   delay(100);
-  mot = '0';
+  cmd = '0';
   sign1 = 1; //起動時に時計回りと約束する。
   sign2 = 1; //起動時に時計回りと約束する。
   Serial.begin(115200);
@@ -30,14 +30,14 @@ void setup() {
 }
 
 void loop() { //このループはCore1が受け持っている。モータ制御。
-  if( mot == '3' ){
+  if( cmd == '3' ){
     while(1) {
       digitalWrite(STEP1, HIGH);
       delayMicroseconds(2250);
       digitalWrite(STEP1, LOW);
       disp1 += 0.005 * sign1;
       delayMicroseconds(2250);
-      if ( mot == '4' ){break;}
+      if ( cmd == '4' ){break;}
     }
   }
   delay(1);
@@ -45,14 +45,14 @@ void loop() { //このループはCore1が受け持っている。モータ制�
 
 void Core1b(void *args) {
   while(1)
-    if( mot == '7' ){
+    if( cmd == '7' ){
     while(1) {
       digitalWrite(STEP2, HIGH);
       delayMicroseconds(2250);
       digitalWrite(STEP2, LOW);
       disp2 += 0.005 * sign2;
       delayMicroseconds(2250);
-      if ( mot == '8' ){break;}
+      if ( cmd == '8' ){break;}
     }
   delay(1);
   }
@@ -79,14 +79,14 @@ void Core0a(void *args) { //このループはCore0が受け持っている。�
 
           serialin = Serial.read(); //内側のwhileループの中でもう一度シリアルから値をもらう。
           if ( serialin == '1') {break;} //2が来れば，内側のwhileループを抜ける
-          else if (serialin == '3') { mot = '3'; } //計測中にモータ系へ値を送る
-          else if (serialin == '4') { mot = '4'; }
+          else if (serialin == '3') { cmd = '3'; } //計測中にモータ系へ値を送る
+          else if (serialin == '4') { cmd = '4'; }
           else if (serialin == '5') {
             sign1 *= -1;
             if (digitalRead(DIR1) == HIGH) { digitalWrite(DIR1, LOW); } else if (digitalRead(DIR1) == LOW) { digitalWrite(DIR1, HIGH); }
           }
-          else if (serialin == '7') { mot = '7'; } //計測中にモータ系へ値を送る
-          else if (serialin == '8') { mot = '8'; }
+          else if (serialin == '7') { cmd = '7'; } //計測中にモータ系へ値を送る
+          else if (serialin == '8') { cmd = '8'; }
           else if (serialin == '9') {
             sign2 *= -1;
             if (digitalRead(DIR2) == HIGH) { digitalWrite(DIR2, LOW); } else if (digitalRead(DIR2) == LOW) { digitalWrite(DIR2, HIGH); }
@@ -94,14 +94,14 @@ void Core0a(void *args) { //このループはCore0が受け持っている。�
         }//内側のwhileループ閉じ
       }//if閉じ。
 
-      if (serialin == '3') { mot = '3'; } //計測中でないときにモータ系へ値を送る
-      else if (serialin == '4') { mot = '4'; }
+      if (serialin == '3') { cmd = '3'; } //計測中でないときにモータ系へ値を送る
+      else if (serialin == '4') { cmd = '4'; }
       else if (serialin == '5') {
         sign1 *= -1;
         if (digitalRead(DIR1) == HIGH) { digitalWrite(DIR1, LOW); } else if (digitalRead(DIR1) == LOW) { digitalWrite(DIR1, HIGH); }
       }
-      else if (serialin == '7') { mot = '7'; }
-      else if (serialin == '8') { mot = '8'; }
+      else if (serialin == '7') { cmd = '7'; }
+      else if (serialin == '8') { cmd = '8'; }
       else if (serialin == '9') {
         sign2 *= -1;
         if (digitalRead(DIR2) == HIGH) { digitalWrite(DIR2, LOW); } else if (digitalRead(DIR2) == LOW) { digitalWrite(DIR2, HIGH); }
