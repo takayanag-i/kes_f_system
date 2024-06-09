@@ -92,26 +92,27 @@ class Executor:
         data.to_csv(f"{self.window.line_edit.text()}.csv", index=False)
 
     def plot_start(self):
-        self.handler.reset_data()
-        self.window.plot_stop_button.setEnabled(True)
+        # self.handler.reset_data()
         try:
             self.sm1.write(cmd.PLOT_START)
             self.window.plot_start_button.setStyleSheet("")
-            self.window.plot_start_button.setText('・・・')
             self.window.plot_stop_button.setStyleSheet(Styles.STYLE_REJECT)
         except Exception as e:
             self.window.plot_start_button.setText('エラー！')
             self.window.message_box.setText(f"Error: {e}")
+        self.window.plot_stop_button.setEnabled(True)
         self.timer = QTimer(self.window)  # QTimerのインスタンスをここで初期化
         self.timer.timeout.connect(self.update)
         self.num = 0
         self.timer.start(0)
 
     def plot_stop(self):
+        self.sm1.write(cmd.PLOT_STOP)
         self.timer.stop()
         self.window.plot_stop_button.setEnabled(False)
         self.window.plot_stop_button.setStyleSheet("")
-        self.sm1.write(cmd.PLOT_STOP)
+        self.window.plot_start_button.setEnabled(False)
+        self.window.plot_start_button.setStyleSheet("")
         self.window.plot_reset_button.setEnabled(True)
         self.window.plot_reset_button.setStyleSheet(Styles.STYLE)
 
@@ -120,30 +121,52 @@ class Executor:
         self.window.plot_stop_button.setEnabled(False)
         self.window.plot_start_button.setEnabled(True)
         self.window.plot_start_button.setStyleSheet(Styles.STYLE)
+        self.window.plot_reset_button.setEnabled(False)
+        self.window.plot_reset_button.setStyleSheet("")
 
     def update(self):
+
+        if self.num == 0:  # シリアルマネージャからの例外キャッチする
+            self.sm1.read_serial_data()
+            self.sm2.read_serial_data()
+
+            self.num += 1
+            return
+
         input1 = self.sm1.read_serial_data()
         input2 = self.sm2.read_serial_data()
 
-        if input1 and input2:
-            processed_data = self.handler.process_data(input1, input2)
-            if processed_data:
-                tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
-                if self.num == 0:
-                    self.t0 = tmp6
-                tmp6 -= self.t0
-                self.handler.update_arrays(tmp1, tmp2, tmp3,
-                                           tmp4, tmp5, tmp6)
-                if self.num % 5 == 0:
-                    t_plt, y1_plt, y2_plt, y3_plt, y4_plt, y5_plt\
-                          = self.handler.update_plts(tmp1, tmp2, tmp3,
-                                                     tmp4, tmp5, tmp6)
-                    self.window.plot_widget.curve1.setData(t_plt, y1_plt)
-                    self.window.plot_widget.curve2.setData(t_plt, y2_plt)
-                    self.window.plot_widget.curve3.setData(t_plt, y3_plt)
-                    self.window.plot_widget.curve4.setData(t_plt, y4_plt)
-                    self.window.plot_widget.curve5.setData(t_plt, y5_plt)
+        if not input1 or not input2:  # シリアルマネージャからの例外キャッチにする
+            self.timer.stop()
+            return
+
+        processed_data = self.handler.process_data(input1, input2)
+
+        if not processed_data:  # ハンドラからの例外キャッチにする
+            self.timer.stop()
+            return
+
+        tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
+
+        if self.num == 1:
+            self.t0 = tmp6
+
+        tmp6 -= self.t0
+        self.handler.update_arrays(tmp1, tmp2, tmp3, tmp4,
+                                   tmp5, tmp6)
+
+        if self.num % 5 == 0:
+            t_plt, y1_plt, y2_plt, y3_plt, y4_plt, y5_plt\
+                    = self.handler.update_plts(tmp1, tmp2, tmp3,
+                                               tmp4, tmp5, tmp6)
+            self.window.plot_widget.curve1.setData(t_plt, y1_plt)
+            self.window.plot_widget.curve2.setData(t_plt, y2_plt)
+            self.window.plot_widget.curve3.setData(t_plt, y3_plt)
+            self.window.plot_widget.curve4.setData(t_plt, y4_plt)
+            self.window.plot_widget.curve5.setData(t_plt, y5_plt)
+
         self.num += 1
+
         if self.num >= const.DATA_LENGTH:
             self.timer.stop()
 
