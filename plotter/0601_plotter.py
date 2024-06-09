@@ -1,4 +1,5 @@
 import sys
+import logging
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
@@ -7,10 +8,15 @@ import pandas as pd
 
 from pkgs.common.constants import (Styles, Commands as cmd,
                                    ArithmeticConstants as const)
-from pkgs.util.serial_manager import SerialManager
+from pkgs.util.serial_manager import SerialManager, SerialManagerError
 from pkgs.util.motor_controller import MotorController
 from pkgs.util.plot_array_handler import PlotArrayHandler
 from pkgs.gui.main_window import Window
+
+# ロガーを設定
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class Executor:
@@ -22,10 +28,10 @@ class Executor:
 
         self.window = Window()
 
-        self.window.combobox1\
-            .currentIndexChanged.connect(self.on_combobox1_changed)
-        self.window.combobox2\
-            .currentIndexChanged.connect(self.on_combobox2_changed)
+        self.window.combobox1.currentIndexChanged \
+            .connect(self.on_combobox1_changed)
+        self.window.combobox2.currentIndexChanged \
+            .connect(self.on_combobox2_changed)
 
         self.set_buttons_listner()
 
@@ -43,8 +49,7 @@ class Executor:
         self.sm1.close_port()
         self.sm1.open_port(port_name)
         if self.sm1.is_ready:
-            self.window.message_box\
-                .setText(f"Connected to {port_name}")
+            self.show_message(f'{port_name}に接続しました', logging.INFO)
             self.enable_plot_start()
 
     def on_combobox2_changed(self, index):
@@ -53,8 +58,7 @@ class Executor:
         self.sm2.close_port()
         self.sm2.open_port(port_name)
         if self.sm2.is_ready:
-            self.window.message_box\
-                .setText(f"Connected to {port_name}")
+            self.show_message(f'{port_name}に接続しました', logging.INFO)
             self.enable_plot_start()
 
     def enable_plot_start(self):
@@ -82,8 +86,7 @@ class Executor:
             self.motor_controller.reverse_motor_y)
 
     def save_func(self):
-        """データをCSVに保存する
-        """
+        """データをCSVに保存する"""
         array = np.array([self.handler.t, self.handler.y1, self.handler.y2,
                           self.handler.y3, self.handler.y4, self.handler.y5])
         array = array.T
@@ -92,14 +95,13 @@ class Executor:
         data.to_csv(f"{self.window.line_edit.text()}.csv", index=False)
 
     def plot_start(self):
-        # self.handler.reset_data()
         try:
             self.sm1.write(cmd.PLOT_START)
             self.window.plot_start_button.setStyleSheet("")
             self.window.plot_stop_button.setStyleSheet(Styles.STYLE_REJECT)
-        except Exception as e:
-            self.window.plot_start_button.setText('エラー！')
-            self.window.message_box.setText(f"Error: {e}")
+        except SerialManagerError as e:
+            self.show_message(str(e), logging.ERROR)
+
         self.window.plot_stop_button.setEnabled(True)
         self.timer = QTimer(self.window)  # QTimerのインスタンスをここで初期化
         self.timer.timeout.connect(self.update)
@@ -125,32 +127,35 @@ class Executor:
         self.window.plot_reset_button.setStyleSheet("")
 
     def update(self):
+        # 1行読み飛ばし
+        if self.num == 0:
+            try:
+                self.sm1.read_serial_data()
+                self.sm2.read_serial_data()
+                self.num += 1
+                return
+            except SerialManagerError as e:
+                self.show_message(str(e), logging.ERROR)
 
-        if self.num == 0:  # シリアルマネージャからの例外キャッチする
-            self.sm1.read_serial_data()
-            self.sm2.read_serial_data()
+        # 2回目以降の処理
+        try:
+            input1 = self.sm1.read_serial_data()
+            input2 = self.sm2.read_serial_data()
+        except SerialManagerError as e:
+            self.show_message(str(e), logging.ERROR)
 
-            self.num += 1
-            return
-
-        input1 = self.sm1.read_serial_data()
-        input2 = self.sm2.read_serial_data()
-
-        if not input1 or not input2:  # シリアルマネージャからの例外キャッチにする
-            self.timer.stop()
-            return
-
-        processed_data = self.handler.process_data(input1, input2)
-
-        if not processed_data:  # ハンドラからの例外キャッチにする
-            self.timer.stop()
-            return
+        try:
+            processed_data = self.handler.process_data(input1, input2)
+        except ValueError as e:
+            self.show_message(str(e), logging.ERROR)
 
         tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
 
+        # 2回目で初期時刻を0にする
         if self.num == 1:
             self.t0 = tmp6
 
+        # 2回目以降の処理のつづき
         tmp6 -= self.t0
         self.handler.update_arrays(tmp1, tmp2, tmp3, tmp4,
                                    tmp5, tmp6)
@@ -169,11 +174,26 @@ class Executor:
 
         if self.num >= const.DATA_LENGTH:
             self.timer.stop()
+            self.show_message("データ長がオーバーしています", logging.WARNING)
 
     def exit(self):
-        self.sm1.close_port()
-        self.sm2.close_port()
-        self.window.close()
+        try:
+            self.sm1.close_port()
+            self.sm2.close_port()
+        except SerialManagerError as e:
+            self.show_message(str(e), logging.ERROR)
+        finally:
+            self.window.close()
+
+    def show_message(self, message, level):
+        """メッセージを表示し、ログに記録する"""
+        self.window.message_box.setText(message)
+        if level == logging.INFO:
+            logger.info(message)
+        elif level == logging.WARNING:
+            logger.warning(message)
+        elif level == logging.ERROR:
+            logger.error(message)
 
 
 def main():

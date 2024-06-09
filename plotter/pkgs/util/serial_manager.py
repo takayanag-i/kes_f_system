@@ -22,18 +22,21 @@ class SerialManager:
         """
         try:
             self.ser = serial.Serial(port, self.baudrate, timeout=None)
-            print(f"Connected to {port}")
             if self.ser and self.ser.is_open:
                 self.is_ready = True
+        except serial.SerialException as e:
+            raise SerialManagerError(f"{port} に接続できませんでした: {e}")
         except Exception as e:
-            print(f"Failed to connect to {port}: {e}")
+            raise SerialManagerError(f"{port} に接続中に予期しないエラーが発生しました: {e}")
 
     def close_port(self):
         """シリアルをクローズ.
         """
         if self.ser and self.ser.is_open:
-            self.ser.close()
-            print("Serial port closed")
+            try:
+                self.ser.close()
+            except Exception as e:
+                raise SerialManagerError(f"ポートを閉じる際に予期しないエラーが発生しました: {e}")
 
     def write(self, data):
         """シリアルに書き込む.
@@ -42,15 +45,31 @@ class SerialManager:
             data -- 値
         """
         if self.ser and self.ser.is_open:
-            self.ser.write(data)
+            try:
+                self.ser.write(data)
+            except serial.SerialTimeoutException as e:
+                raise SerialManagerError(f"書き込みタイムアウトが発生しました: {e}")
+            except Exception as e:
+                raise SerialManagerError(f"データを書き込む際に予期しないエラーが発生しました: {e}")
 
     def read_serial_data(self):
         """シリアルから値を読む.
 
         Returns: 一行分
         """
-        try:
-            input_serial = self.ser.readline().rstrip()
-            return input_serial.decode()
-        except (UnicodeDecodeError, ValueError):
-            return None
+        if self.ser and self.ser.is_open:
+            try:
+                input_serial = self.ser.readline().rstrip()
+                return input_serial.decode()
+            except UnicodeDecodeError as e:
+                raise SerialManagerError(f"Unicode デコードエラーが発生しました: {e}")
+            except ValueError as e:
+                raise SerialManagerError(f"値エラーが発生しました: {e}")
+            except Exception as e:
+                raise SerialManagerError(f"データを読み取る際に予期しないエラーが発生しました: {e}")
+        else:
+            raise SerialManagerError("シリアルポートが開いていません")
+
+
+class SerialManagerError(Exception):
+    pass
