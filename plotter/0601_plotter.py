@@ -42,18 +42,24 @@ class Executor:
         port_name = self.window.combobox1.itemText(index)
         self.sm1.close_port()
         self.sm1.open_port(port_name)
-        if self.sm1.ser and self.sm1.ser.is_open:
+        if self.sm1.is_ready:
             self.window.message_box\
                 .setText(f"Connected to {port_name}")
+            self.enable_plot_start()
 
     def on_combobox2_changed(self, index):
         """上に同じ"""
         port_name = self.window.combobox2.itemText(index)
         self.sm2.close_port()
         self.sm2.open_port(port_name)
-        if self.sm2.ser and self.sm2.ser.is_open:
+        if self.sm2.is_ready:
             self.window.message_box\
                 .setText(f"Connected to {port_name}")
+            self.enable_plot_start()
+
+    def enable_plot_start(self):
+        if self.sm1.is_ready and self.sm2.is_ready:
+            self.window.plot_start_button.setEnabled(True)
 
     def set_buttons_listner(self):
         self.window.save_button.set_callback(self.save_func)
@@ -78,12 +84,8 @@ class Executor:
     def save_func(self):
         """データをCSVに保存する
         """
-        array = np.append(np.array([self.handler.t,
-                                    self.handler.y1,
-                                    self.handler.y2,
-                                    self.handler.y3,
-                                    self.handler.y4,
-                                    self.handler.y5]), axis=0)
+        array = np.array([self.handler.t, self.handler.y1, self.handler.y2,
+                          self.handler.y3, self.handler.y4, self.handler.y5])
         array = array.T
         columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
         data = pd.DataFrame(array, columns=columns)

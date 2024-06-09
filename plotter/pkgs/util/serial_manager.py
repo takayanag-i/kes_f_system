@@ -12,6 +12,7 @@ class SerialManager:
         """
         self.ser = None
         self.baudrate = baudrate
+        self.is_ready = False
 
     def open_port(self, port):
         """シリアルをオープン.
@@ -22,6 +23,8 @@ class SerialManager:
         try:
             self.ser = serial.Serial(port, self.baudrate, timeout=None)
             print(f"Connected to {port}")
+            if self.ser and self.ser.is_open:
+                self.is_ready = True
         except Exception as e:
             print(f"Failed to connect to {port}: {e}")
 
