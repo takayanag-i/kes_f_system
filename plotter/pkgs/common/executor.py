@@ -1,10 +1,7 @@
-import sys
 import logging
 
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtCore import QTimer
-import numpy as np
-import pandas as pd
 
 from pkgs.common.constants import (Styles, Commands as cmd,
                                    ArithmeticConstants as const)
@@ -12,6 +9,7 @@ from pkgs.util.serial_manager import SerialManager, SerialManagerError
 from pkgs.util.motor_controller import MotorController
 from pkgs.util.plot_array_handler import PlotArrayHandler
 from pkgs.gui.main_window import Window
+
 
 # ロガーを設定
 logging.basicConfig(level=logging.INFO,
@@ -25,74 +23,51 @@ class Executor:
         self.sm2 = SerialManager()
         self.motor_controller = MotorController(self.sm1)
         self.handler = PlotArrayHandler()
-
         self.window = Window()
+        self.setup_event_handlers()
 
-        self.window.combobox1.currentIndexChanged \
-            .connect(self.on_combobox1_changed)
-        self.window.combobox2.currentIndexChanged \
-            .connect(self.on_combobox2_changed)
-
-        self.set_buttons_listner()
-
-    def on_combobox1_changed(self, index):
-        """コンボボックスの値が変更されたときの処理.
-
-        スロットメソッド
-        選択されたポートをオープンしてラインテキストを変更
-
-        Arguments:
-            index -- インデックス
-            呼び出し元のシグナルcurrentIndexChangedから受け取る
-        """
-        port_name = self.window.combobox1.itemText(index)
-        self.sm1.close_port()
-        self.sm1.open_port(port_name)
-        if self.sm1.is_ready:
-            self.show_message(f'{port_name}に接続しました', logging.INFO)
+    def connect_signal_and_slot(self, sender: QComboBox, sm: SerialManager):
+        def select_port_slot(index):
+            port_name = sender.itemText(index)
+            sm.close_port()
+            sm.open_port(port_name)
+            if sm.is_ready:
+                self.show_message(f'{port_name}に接続しました', logging.INFO)
             self.enable_plot_start()
 
-    def on_combobox2_changed(self, index):
-        """上に同じ"""
-        port_name = self.window.combobox2.itemText(index)
-        self.sm2.close_port()
-        self.sm2.open_port(port_name)
-        if self.sm2.is_ready:
-            self.show_message(f'{port_name}に接続しました', logging.INFO)
-            self.enable_plot_start()
+        signal = sender.currentIndexChanged
+        signal.connect(select_port_slot)
 
     def enable_plot_start(self):
         if self.sm1.is_ready and self.sm2.is_ready:
             self.window.plot_start_button.setEnabled(True)
 
-    def set_buttons_listner(self):
-        self.window.save_button.set_callback(self.save_func)
+    def setup_event_handlers(self):
+
+        # MainUI
+        self.window.save_button.set_callback(self.handler.save_to_csv)
         self.window.plot_start_button.set_callback(self.plot_start)
         self.window.plot_stop_button.set_callback(self.plot_stop)
         self.window.plot_reset_button.set_callback(self.reset)
         self.window.exit_button.set_callback(self.exit)
 
-        self.window.widget_for_controller.motor_start_1.set_callback(
+        # MotorControllerUI
+        self.window.motor_ui.motor_start_1.set_callback(
             self.motor_controller.start_motor_x)
-        self.window.widget_for_controller.motor_stop_1.set_callback(
+        self.window.motor_ui.motor_stop_1.set_callback(
             self.motor_controller.stop_motor_x)
-        self.window.widget_for_controller.motor_reverse_1.set_callback(
+        self.window.motor_ui.motor_reverse_1.set_callback(
             self.motor_controller.reverse_motor_x)
-        self.window.widget_for_controller.motor_start_2.set_callback(
+        self.window.motor_ui.motor_start_2.set_callback(
             self.motor_controller.start_motor_y)
-        self.window.widget_for_controller.motor_stop_2.set_callback(
+        self.window.motor_ui.motor_stop_2.set_callback(
             self.motor_controller.stop_motor_y)
-        self.window.widget_for_controller.motor_reverse_2.set_callback(
+        self.window.motor_ui.motor_reverse_2.set_callback(
             self.motor_controller.reverse_motor_y)
 
-    def save_func(self):
-        """データをCSVに保存する"""
-        array = np.array([self.handler.t, self.handler.y1, self.handler.y2,
-                          self.handler.y3, self.handler.y4, self.handler.y5])
-        array = array.T
-        columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
-        data = pd.DataFrame(array, columns=columns)
-        data.to_csv(f"{self.window.line_edit.text()}.csv", index=False)
+        # ComboBoxes
+        self.connect_signal_and_slot(self.window.combobox1, self.sm1)
+        self.connect_signal_and_slot(self.window.combobox2, self.sm2)
 
     def plot_start(self):
         try:
@@ -101,6 +76,7 @@ class Executor:
             self.window.plot_stop_button.setStyleSheet(Styles.STYLE_REJECT)
         except SerialManagerError as e:
             self.show_message(str(e), logging.ERROR)
+            return
 
         self.window.plot_stop_button.setEnabled(True)
         self.timer = QTimer(self.window)  # QTimerのインスタンスをここで初期化
@@ -109,12 +85,17 @@ class Executor:
         self.timer.start(0)
 
     def plot_stop(self):
-        self.sm1.write(cmd.PLOT_STOP)
-        self.timer.stop()
-        self.window.plot_stop_button.setEnabled(False)
-        self.window.plot_stop_button.setStyleSheet("")
-        self.window.plot_start_button.setEnabled(False)
-        self.window.plot_start_button.setStyleSheet("")
+        try:
+            self.sm1.write(cmd.PLOT_STOP)
+        except SerialManagerError as e:
+            self.show_message(str(e), logging.ERROR)
+        finally:
+            self.timer.stop()
+            self.window.plot_stop_button.setEnabled(False)
+            self.window.plot_stop_button.setStyleSheet("")
+            self.window.plot_start_button.setEnabled(False)
+            self.window.plot_start_button.setStyleSheet("")
+
         self.window.plot_reset_button.setEnabled(True)
         self.window.plot_reset_button.setStyleSheet(Styles.STYLE)
 
@@ -136,6 +117,7 @@ class Executor:
                 return
             except SerialManagerError as e:
                 self.show_message(str(e), logging.ERROR)
+                return
 
         # 2回目以降の処理
         try:
@@ -143,15 +125,17 @@ class Executor:
             input2 = self.sm2.read_serial_data()
         except SerialManagerError as e:
             self.show_message(str(e), logging.ERROR)
+            return
 
         try:
             processed_data = self.handler.process_data(input1, input2)
         except ValueError as e:
             self.show_message(str(e), logging.ERROR)
+            return
 
         tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
 
-        # 2回目で初期時刻を0にする
+        # 2回目で初期時刻を格納
         if self.num == 1:
             self.t0 = tmp6
 
@@ -194,15 +178,3 @@ class Executor:
             logger.warning(message)
         elif level == logging.ERROR:
             logger.error(message)
-
-
-def main():
-    """メイン関数"""
-    app = QApplication(sys.argv)
-    executor = Executor()
-    executor.window.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()

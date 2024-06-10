@@ -2,7 +2,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsWidget
 from PyQt6.QtGui import QFont
 
-from ..common.constants import FontConfig as fnt, GraphLavels as lvl
+from pkgs.common.constants import FontConfig as fnt, GraphLavels as lvl
 
 
 class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):

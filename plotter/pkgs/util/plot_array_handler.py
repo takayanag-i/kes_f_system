@@ -1,6 +1,7 @@
 import numpy as np
+import pandas as pd
 
-from ..common.constants import ArithmeticConstants as const
+from pkgs.common.constants import ArithmeticConstants as const
 
 
 class PlotArrayHandler:
@@ -59,3 +60,11 @@ class PlotArrayHandler:
         self.t_plt = np.append(self.t_plt, tmp6)
         return self.t_plt, self.y1_plt, self.y2_plt, self.y3_plt, \
             self.y4_plt, self.y5_plt
+
+    def save_to_csv(self):
+        """データをCSVに保存する"""
+        array = np.array([self.t, self.y1, self.y2, self.y3, self.y4, self.y5])
+        array = array.T
+        columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
+        data = pd.DataFrame(array, columns=columns)
+        data.to_csv(f"{self.window.line_edit.text()}.csv", index=False)

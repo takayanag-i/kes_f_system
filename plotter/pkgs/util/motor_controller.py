@@ -1,7 +1,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal
 from .serial_manager import SerialManager
 
-from ..common.constants import Commands as cmd
+from pkgs.common.constants import Commands as cmd
 
 
 class MotorController(QObject):

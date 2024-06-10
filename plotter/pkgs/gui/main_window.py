@@ -5,10 +5,10 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QLineEdit,
                              QGridLayout, QLabel, QComboBox)
 from PyQt6.QtGui import QFont
 
-from ..common.button import Button
-from ..common.constants import (Formats as fmt, FontConfig as fnt)
-from ..gui.multi_axis_graph import MultiAxisGraphWidget
-from ..gui.motor_ctrl_widget import MotorControlWidget
+from pkgs.gui.button import Button
+from pkgs.common.constants import (Formats as fmt, FontConfig as fnt)
+from pkgs.gui.multi_axis_graph import MultiAxisGraphWidget
+from pkgs.gui.motor_ctrl_widget import MotorControlWidget
 
 
 class Window(QMainWindow):
@@ -39,7 +39,7 @@ class Window(QMainWindow):
         self.plot_widget = MultiAxisGraphWidget()
 
         self.widget_for_comport = QWidget()
-        self.widget_for_controller = MotorControlWidget()
+        self.motor_ui = MotorControlWidget()
 
         # ボタン
         self.save_button = Button('Save')
@@ -93,7 +93,7 @@ class Window(QMainWindow):
         self.layout.addWidget(self.line_edit, 2, 1)
         self.layout.addWidget(self.message_box, 6, 1)
         # コントローラ
-        self.layout.addWidget(self.widget_for_controller, 3, 1, 4, 1)
+        self.layout.addWidget(self.motor_ui, 3, 1, 4, 1)
 
     def get_serial_ports(self):
         """接続可能なポート名を取得する

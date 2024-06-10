@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QGridLayout
 
-from ..common.constants import ButtonLavels as lvl
-from ..util.motor_controller import MotorController
-from ..common.button import Button
+from pkgs.common.constants import ButtonLavels as lvl
+from pkgs.util.motor_controller import MotorController
+from pkgs.gui.button import Button
 
 
 class MotorControlWidget(QWidget):
