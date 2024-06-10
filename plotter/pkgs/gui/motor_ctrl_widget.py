@@ -8,11 +8,6 @@ from pkgs.gui.button import Button
 class MotorControlWidget(QWidget):
     """モーターコントロールウィジェット"""
     def __init__(self):
-        """コンストラクタ
-
-        Arguments:
-            motor_controller -- MotorControllerオブジェクト
-        """
         super().__init__()
         self.mc: MotorController = None
         self.init_ui()
@@ -57,7 +52,7 @@ class MotorControlWidget(QWidget):
         self.toggle_button_text(self.start2,
                                 lv.ELONG_LAVEL2, lv.SHRINK_LAVEL2)
 
-    def toggle_button_text(self, button, text1, text2):
+    def toggle_button_text(self, button: Button, text1, text2):
         """ボタンのテキストを切り替える"""
         button.setText(text2 if button.text() == text1 else text1)
 

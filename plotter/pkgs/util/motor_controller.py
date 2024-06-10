@@ -6,6 +6,7 @@ from pkgs.common.constants import Commands as cmd
 
 class MotorController(QObject):
     """モーターコントローラ"""
+
     motor1_reversed_signal = pyqtSignal()
     motor2_reversed_signal = pyqtSignal()
 
