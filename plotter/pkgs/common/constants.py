@@ -8,22 +8,22 @@ class Commands(bytes, Enum):
     PLOT_START = b'0'
     PLOT_STOP = b'1'
     # モータ制御コマンド
-    MOTOR_X_START = b'3'
-    MOTOR_X_STOP = b'4'
-    MOTOR_X_REVERSE = b'5'
+    MOTOR_START1 = b'3'
+    MOTOR_STOP1 = b'4'
+    MOTOR_REVERSE1 = b'5'
 
-    MOTOR_Y_START = b'7'
-    MOTOR_Y_STOP = b'8'
-    MOTOR_Y_REVERSE = b'9'
+    MOTOR_START2 = b'7'
+    MOTOR_STOP2 = b'8'
+    MOTOR_REVERSE2 = b'9'
 
 
 class ButtonLavels(StrEnum):
-    ELONG_X_LAVEL = 'Xのばす'
-    SHRINK_X_LAVEL = 'X縮める'
-    REVERS_X_LAVEL = 'X逆回転'
-    ELONG_Y_LAVEL = 'Yのばす'
-    SHRINK_Y_LAVEL = 'Y縮める'
-    REVERS_Y_LAVEL = 'Y逆回転'
+    ELONG_LAVEL1 = '1のばす'
+    SHRINK_LAVEL1 = '1縮める'
+    REVERS_LAVEL1 = '1逆回転'
+    ELONG_LAVEL2 = '2のばす'
+    SHRINK_LAVEL2 = '2縮める'
+    REVERS_LAVEL2 = '2逆回転'
 
 
 class GraphLavels(StrEnum):

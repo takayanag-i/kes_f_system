@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QGridLayout
 
-from pkgs.common.constants import ButtonLavels as lvl
+from pkgs.common.constants import ButtonLavels as lv
 from pkgs.util.motor_controller import MotorController
 from pkgs.gui.button import Button
 
@@ -14,27 +14,27 @@ class MotorControlWidget(QWidget):
             motor_controller -- MotorControllerオブジェクト
         """
         super().__init__()
-        self.motor_controller = None
+        self.mc: MotorController = None
         self.init_ui()
 
     def init_ui(self):
         """UIの初期化"""
         layout = QGridLayout(self)
 
-        self.motor_start_1 = Button(lvl.ELONG_X_LAVEL)
-        self.motor_stop_1 = Button(lvl.SHRINK_X_LAVEL)
-        self.motor_reverse_1 = Button(lvl.REVERS_X_LAVEL)
-        self.motor_start_2 = Button(lvl.ELONG_Y_LAVEL)
-        self.motor_stop_2 = Button(lvl.SHRINK_Y_LAVEL)
-        self.motor_reverse_2 = Button(lvl.REVERS_Y_LAVEL)
+        self.start1 = Button(lv.ELONG_LAVEL1)
+        self.stop1 = Button(lv.SHRINK_LAVEL1)
+        self.reverse1 = Button(lv.REVERS_LAVEL1)
+        self.start2 = Button(lv.ELONG_LAVEL2)
+        self.stop2 = Button(lv.SHRINK_LAVEL2)
+        self.reverse2 = Button(lv.REVERS_LAVEL2)
 
         buttons = [
-            (self.motor_start_1, 0, 0),
-            (self.motor_stop_1, 0, 1),
-            (self.motor_reverse_1, 0, 2),
-            (self.motor_start_2, 1, 0),
-            (self.motor_stop_2, 1, 1),
-            (self.motor_reverse_2, 1, 2)
+            (self.start1, 0, 0),
+            (self.stop1, 0, 1),
+            (self.reverse1, 0, 2),
+            (self.start2, 1, 0),
+            (self.stop2, 1, 1),
+            (self.reverse2, 1, 2)
         ]
 
         for btn, row, col in buttons:
@@ -42,38 +42,33 @@ class MotorControlWidget(QWidget):
 
     def init_signals(self):
         """シグナルを初期化する"""
-        self.motor_controller.on_motor_x_reversed.connect(
-            self.on_motor_x_reversed)
-        self.motor_controller.on_motor_y_reversed.connect(
-            self.on_motor_y_reversed)
+        self.mc.motor1_reversed_signal.connect(
+            self.on_motor1_reversed)
+        self.mc.motor2_reversed_signal.connect(
+            self.on_motor2_reversed)
 
-    def on_motor_x_reversed(self):
-        """motor_x_reversedに対するスロットメソッド"""
-        self.toggle_button_text(self.motor_start_1,
-                                lvl.ELONG_X_LAVEL, lvl.SHRINK_X_LAVEL)
+    def on_motor1_reversed(self):
+        """motor1_reversed_signalに対するスロットメソッド"""
+        self.toggle_button_text(self.start1,
+                                lv.ELONG_LAVEL1, lv.SHRINK_LAVEL1)
 
-    def on_motor_y_reversed(self):
-        """motor_y_reversedに対するスロットメソッド"""
-        self.toggle_button_text(self.motor_start_2,
-                                lvl.ELONG_Y_LAVEL, lvl.SHRINK_Y_LAVEL)
+    def on_motor2_reversed(self):
+        """motor2_reversed_signalに対するスロットメソッド"""
+        self.toggle_button_text(self.start2,
+                                lv.ELONG_LAVEL2, lv.SHRINK_LAVEL2)
 
     def toggle_button_text(self, button, text1, text2):
         """ボタンのテキストを切り替える"""
         button.setText(text2 if button.text() == text1 else text1)
 
-    def set_motor_controller(self, motor_controller: MotorController):
+    def set_motor_controller(self, mc: MotorController):
         """MotorControllerオブジェクトをセットする
 
         Arguments:
             motor_controller -- MotorControllerオブジェクト
         """
-        if self.motor_controller is not None:
-            self.throw_motor_ctrl_error()
-            return
+        if self.mc is not None:
+            raise ValueError("MotorController has already been set")
 
-        self.motor_controller = motor_controller
+        self.mc = mc
         self.init_signals()
-
-    def throw_motor_ctrl_error(self):
-        """MotorControllerが既にセットされているときエラー"""
-        raise ValueError("MotorController has already been set")

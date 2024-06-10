@@ -6,8 +6,8 @@ from pkgs.common.constants import Commands as cmd
 
 class MotorController(QObject):
     """モーターコントローラ"""
-    on_motor_x_reversed = pyqtSignal()
-    on_motor_y_reversed = pyqtSignal()
+    motor1_reversed_signal = pyqtSignal()
+    motor2_reversed_signal = pyqtSignal()
 
     def __init__(self, serial_manager: SerialManager):
         """コンストラクタ
@@ -18,28 +18,28 @@ class MotorController(QObject):
         super().__init__()
         self.sm = serial_manager
 
-    def start_motor_x(self):
-        """X軸モーターを開始する"""
-        self.sm.write(cmd.MOTOR_X_START)
+    def start_motor1(self):
+        """モーター1を開始する"""
+        self.sm.write(cmd.MOTOR_START1)
 
-    def stop_motor_x(self):
-        """X軸モーターを停止する"""
-        self.sm.write(cmd.MOTOR_X_STOP)
+    def stop_motor1(self):
+        """モーター1を停止する"""
+        self.sm.write(cmd.MOTOR_STOP1)
 
-    def reverse_motor_x(self):
-        """X軸モーターの回転を反転する"""
-        self.sm.write(cmd.MOTOR_X_REVERSE)
-        self.on_motor_x_reversed.emit()
+    def reverse_motor1(self):
+        """モーター1を反転する"""
+        self.sm.write(cmd.MOTOR_REVERSE1)
+        self.motor1_reversed_signal.emit()
 
-    def start_motor_y(self):
-        """Y軸モーターを開始する"""
-        self.sm.write(cmd.MOTOR_Y_START)
+    def start_motor2(self):
+        """モーター2を開始する"""
+        self.sm.write(cmd.MOTOR_START2)
 
-    def stop_motor_y(self):
-        """Y軸モーターを停止する"""
-        self.sm.write(cmd.MOTOR_Y_STOP)
+    def stop_motor2(self):
+        """モーター2を停止する"""
+        self.sm.write(cmd.MOTOR_STOP2)
 
-    def reverse_motor_y(self):
-        """Y軸モーターの回転を反転する"""
-        self.sm.write(cmd.MOTOR_Y_REVERSE)
-        self.on_motor_y_reversed.emit()
+    def reverse_motor2(self):
+        """モーター2を反転する"""
+        self.sm.write(cmd.MOTOR_REVERSE2)
+        self.motor2_reversed_signal.emit()

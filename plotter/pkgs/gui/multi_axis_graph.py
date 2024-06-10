@@ -2,7 +2,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsWidget
 from PyQt6.QtGui import QFont
 
-from pkgs.common.constants import FontConfig as fnt, GraphLavels as lvl
+from pkgs.common.constants import FontConfig as FontConfig, GraphLavels as lv
 
 
 class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
@@ -14,7 +14,7 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
         """
         super().__init__()
         self.show = True
-        self.font = QFont(fnt.FONT_FAMILY, fnt.FONT_SIZE)
+        self.font = QFont(FontConfig.FONT_FAMILY, FontConfig.FONT_SIZE)
 
         self.plot1 = self.addPlot(row=0, col=0)
         self.curve1 = self.plot1.plot(pen=(221, 238, 255))
@@ -95,10 +95,10 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
 
     def setup_labels(self) -> None:
         labelstyle = {'color': '#FFF', 'font-size': '12pt'}
-        self.plot1.setLabel('left', lvl.FORCE_AX_LAVEL, **labelstyle)
-        self.plot1.setLabel('right', lvl.DISP_AX_LAVEL, **labelstyle)
-        self.plot1.setLabel('bottom', lvl.TIME_AX_LAVEL, **labelstyle)
-        self.ax5.setLabel(lvl.SENSOR_AX_LAVEL, **labelstyle)
+        self.plot1.setLabel('left', lv.FORCE_AX_LAVEL, **labelstyle)
+        self.plot1.setLabel('right', lv.DISP_AX_LAVEL, **labelstyle)
+        self.plot1.setLabel('bottom', lv.TIME_AX_LAVEL, **labelstyle)
+        self.ax5.setLabel(lv.SENSOR_AX_LAVEL, **labelstyle)
 
         self.plot1.setXRange(0, 50, padding=0)
         self.plot1.setYRange(-0.1, 3.3, padding=0)

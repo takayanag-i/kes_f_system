@@ -1,45 +1,36 @@
 import datetime as dt
-
 import serial.tools.list_ports
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QLineEdit,
                              QGridLayout, QLabel, QComboBox)
 from PyQt6.QtGui import QFont
 
+from pkgs.common.constants import (Formats, FontConfig)
 from pkgs.gui.button import Button
-from pkgs.common.constants import (Formats as fmt, FontConfig as fnt)
 from pkgs.gui.multi_axis_graph import MultiAxisGraphWidget
 from pkgs.gui.motor_ctrl_widget import MotorControlWidget
 
 
 class Window(QMainWindow):
-    """メインウィンドウクラス
+    """メインウィンドウクラス"""
 
-    @Override QMainWindow
-    """
     def __init__(self):
         super().__init__()
+
         self.init_ui()
+        self.configure_ui()
+        self.arrange_layouts()
 
     def init_ui(self):
         """UIの初期化
         """
-        self.setWindowTitle("KES-F System")
-        self.setGeometry(100, 100, 800, 450)
-        self.widget = QWidget()
-        self.setCentralWidget(self.widget)
-        self.layout = QGridLayout()
-        self.widget.setLayout(self.layout)
-        self.create_widgets()
-        self.arrange_widgets()
-        self.layout_widgets()
-
-    def create_widgets(self):
-        """ウィジェットの生成
-        """
-        self.plot_widget = MultiAxisGraphWidget()
-
-        self.widget_for_comport = QWidget()
+        self.main_widget = QWidget()
+        self.plot_area = MultiAxisGraphWidget()
+        self.comport_ui = QWidget()
         self.motor_ui = MotorControlWidget()
+
+        # レイアウト
+        self.main_layout = QGridLayout()
+        self.comport_ui_layout = QGridLayout()
 
         # ボタン
         self.save_button = Button('Save')
@@ -49,60 +40,57 @@ class Window(QMainWindow):
         self.exit_button = Button('Exit')
 
         # テキストエリア
-        self.line_edit = QLineEdit(dt.datetime.now().strftime(fmt.DATE_FMT))
+        self.line_edit = QLineEdit(
+            dt.datetime.now().strftime(Formats.DATE_FMT))
         self.message_box = QLabel('シリアルポートを選択してください')
 
         # コンボボックス
+        self.combobox1_label = QLabel('COM Port : ESP32 Dev Module')
         self.combobox1 = QComboBox()
+        self.combobox2_label = QLabel('COM Port : RP2040 Xiao')
         self.combobox2 = QComboBox()
 
-    def arrange_widgets(self):
-        """ウィジェットの操作
+    def configure_ui(self):
+        """UI要素の設定
         """
-        self.plot_widget.setMinimumSize(800, 450)
-        self.widget_for_comport.setMaximumHeight(160)
-        self.line_edit.setFont(QFont(fnt.FONT_FAMILY, fnt.FONT_SIZE))
+        self.setWindowTitle('KES-F System')
+        self.setGeometry(100, 100, 800, 450)
+        self.setCentralWidget(self.main_widget)
+        self.plot_area.setMinimumSize(800, 450)
+        self.comport_ui.setMaximumHeight(160)
+        self.line_edit.setFont(
+            QFont(FontConfig.FONT_FAMILY, FontConfig.FONT_SIZE))
 
-        # コンボボックス
-        self.combobox1.addItems(self.get_serial_ports())
-        self.combobox1_label = QLabel('COM Port : ESP32 Dev Module')
+        def get_serial_ports():
+            ports = serial.tools.list_ports.comports()
+            port_list = [port.device for port in ports]
+            port_list.insert(0, '---')
+            return port_list
 
-        self.combobox2.addItems(self.get_serial_ports())
-        self.combobox2_label = QLabel('COM Port : RP2040 Xiao')
+        self.combobox1.addItems(get_serial_ports())
+        self.combobox2.addItems(get_serial_ports())
 
-    def layout_widgets(self):
+    def arrange_layouts(self):
         """部品をレイアウトに追加
         """
-        self.layout2 = QGridLayout()
-        self.widget_for_comport.setLayout(self.layout2)
-        # ウィジェット
-        self.layout.addWidget(self.plot_widget, 0, 1)
-        self.layout.addWidget(self.widget_for_comport, 0, 0)
-        # ボタン
-        self.layout.addWidget(self.save_button, 2, 0)
-        self.layout.addWidget(self.plot_start_button, 3, 0)
-        self.layout.addWidget(self.plot_stop_button, 4, 0)
-        self.layout.addWidget(self.plot_reset_button, 5, 0)
-        self.layout.addWidget(self.exit_button, 6, 0)
-        # コンボボックス
-        self.layout2.addWidget(self.combobox1_label, 0, 0)
-        self.layout2.addWidget(self.combobox1, 1, 0)
-        self.layout2.addWidget(self.combobox2_label, 2, 0)
-        self.layout2.addWidget(self.combobox2, 3, 0)
-        # テキストエリア
-        self.layout.addWidget(self.line_edit, 2, 1)
-        self.layout.addWidget(self.message_box, 6, 1)
-        # コントローラ
-        self.layout.addWidget(self.motor_ui, 3, 1, 4, 1)
+        # main_layout
+        self.main_widget.setLayout(self.main_layout)
 
-    def get_serial_ports(self):
-        """接続可能なポート名を取得する
+        self.main_layout.addWidget(self.plot_area, 0, 1)
+        self.main_layout.addWidget(self.comport_ui, 0, 0)
+        self.main_layout.addWidget(self.save_button, 2, 0)
+        self.main_layout.addWidget(self.plot_start_button, 3, 0)
+        self.main_layout.addWidget(self.plot_stop_button, 4, 0)
+        self.main_layout.addWidget(self.plot_reset_button, 5, 0)
+        self.main_layout.addWidget(self.exit_button, 6, 0)
+        self.main_layout.addWidget(self.line_edit, 2, 1)
+        self.main_layout.addWidget(self.message_box, 6, 1)
+        self.main_layout.addWidget(self.motor_ui, 3, 1, 4, 1)
 
-        Returns:
-            ポート名のリスト
-        """
-        ports = serial.tools.list_ports.comports()
-        port_list = [port.device for port in ports]
-        # port_list = ['/dev/ttys45', '/dev/ttys46']
-        port_list.insert(0, '---')
-        return port_list
+        # comport_ui_layout
+        self.comport_ui.setLayout(self.comport_ui_layout)
+
+        self.comport_ui_layout.addWidget(self.combobox1_label, 0, 0)
+        self.comport_ui_layout.addWidget(self.combobox1, 1, 0)
+        self.comport_ui_layout.addWidget(self.combobox2_label, 2, 0)
+        self.comport_ui_layout.addWidget(self.combobox2, 3, 0)

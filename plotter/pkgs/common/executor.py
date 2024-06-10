@@ -21,12 +21,12 @@ class Executor:
     def __init__(self):
         self.sm1 = SerialManager()
         self.sm2 = SerialManager()
-        self.motor_controller = MotorController(self.sm1)
+        self.mc = MotorController(self.sm1)
         self.handler = PlotArrayHandler()
         self.window = Window()
         self.setup_event_handlers()
 
-    def connect_signal_and_slot(self, sender: QComboBox, sm: SerialManager):
+    def init_signal(self, sender: QComboBox, sm: SerialManager):
         def select_port_slot(index):
             port_name = sender.itemText(index)
             sm.close_port()
@@ -52,22 +52,22 @@ class Executor:
         self.window.exit_button.set_callback(self.exit)
 
         # MotorControllerUI
-        self.window.motor_ui.motor_start_1.set_callback(
-            self.motor_controller.start_motor_x)
-        self.window.motor_ui.motor_stop_1.set_callback(
-            self.motor_controller.stop_motor_x)
-        self.window.motor_ui.motor_reverse_1.set_callback(
-            self.motor_controller.reverse_motor_x)
-        self.window.motor_ui.motor_start_2.set_callback(
-            self.motor_controller.start_motor_y)
-        self.window.motor_ui.motor_stop_2.set_callback(
-            self.motor_controller.stop_motor_y)
-        self.window.motor_ui.motor_reverse_2.set_callback(
-            self.motor_controller.reverse_motor_y)
+        self.window.motor_ui.start1.set_callback(
+            self.mc.start_motor1)
+        self.window.motor_ui.stop1.set_callback(
+            self.mc.stop_motor1)
+        self.window.motor_ui.reverse1.set_callback(
+            self.mc.reverse_motor1)
+        self.window.motor_ui.start2.set_callback(
+            self.mc.start_motor2)
+        self.window.motor_ui.stop2.set_callback(
+            self.mc.stop_motor2)
+        self.window.motor_ui.reverse2.set_callback(
+            self.mc.reverse_motor2)
 
         # ComboBoxes
-        self.connect_signal_and_slot(self.window.combobox1, self.sm1)
-        self.connect_signal_and_slot(self.window.combobox2, self.sm2)
+        self.init_signal(self.window.combobox1, self.sm1)
+        self.init_signal(self.window.combobox2, self.sm2)
 
     def plot_start(self):
         try:
@@ -148,11 +148,11 @@ class Executor:
             t_plt, y1_plt, y2_plt, y3_plt, y4_plt, y5_plt\
                     = self.handler.update_plts(tmp1, tmp2, tmp3,
                                                tmp4, tmp5, tmp6)
-            self.window.plot_widget.curve1.setData(t_plt, y1_plt)
-            self.window.plot_widget.curve2.setData(t_plt, y2_plt)
-            self.window.plot_widget.curve3.setData(t_plt, y3_plt)
-            self.window.plot_widget.curve4.setData(t_plt, y4_plt)
-            self.window.plot_widget.curve5.setData(t_plt, y5_plt)
+            self.window.plot_area.curve1.setData(t_plt, y1_plt)
+            self.window.plot_area.curve2.setData(t_plt, y2_plt)
+            self.window.plot_area.curve3.setData(t_plt, y3_plt)
+            self.window.plot_area.curve4.setData(t_plt, y4_plt)
+            self.window.plot_area.curve5.setData(t_plt, y5_plt)
 
         self.num += 1
 
