@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QGridLayout
 
-from pkgs.common.constants import ButtonLavels as lv
+from pkgs.common.constants import ButtonLabels
 from pkgs.util.motor_controller import MotorController
 from pkgs.gui.button import Button
 
@@ -16,12 +16,12 @@ class MotorControlWidget(QWidget):
         """UIの初期化"""
         layout = QGridLayout(self)
 
-        self.start1 = Button(lv.ELONG_LAVEL1)
-        self.stop1 = Button(lv.SHRINK_LAVEL1)
-        self.reverse1 = Button(lv.REVERS_LAVEL1)
-        self.start2 = Button(lv.ELONG_LAVEL2)
-        self.stop2 = Button(lv.SHRINK_LAVEL2)
-        self.reverse2 = Button(lv.REVERS_LAVEL2)
+        self.start1 = Button(ButtonLabels.ELONG1)
+        self.stop1 = Button(ButtonLabels.SHRINK1)
+        self.reverse1 = Button(ButtonLabels.REVERSE1)
+        self.start2 = Button(ButtonLabels.ELONG2)
+        self.stop2 = Button(ButtonLabels.SHRINK2)
+        self.reverse2 = Button(ButtonLabels.REVERSE2)
 
         buttons = [
             (self.start1, 0, 0),
@@ -44,13 +44,13 @@ class MotorControlWidget(QWidget):
 
     def on_motor1_reversed(self):
         """motor1_reversed_signalに対するスロットメソッド"""
-        self.toggle_button_text(self.start1,
-                                lv.ELONG_LAVEL1, lv.SHRINK_LAVEL1)
+        self.toggle_button_text(
+            self.start1, ButtonLabels.ELONG1, ButtonLabels.SHRINK1)
 
     def on_motor2_reversed(self):
         """motor2_reversed_signalに対するスロットメソッド"""
-        self.toggle_button_text(self.start2,
-                                lv.ELONG_LAVEL2, lv.SHRINK_LAVEL2)
+        self.toggle_button_text(
+            self.start2, ButtonLabels.ELONG2, ButtonLabels.SHRINK2)
 
     def toggle_button_text(self, button: Button, text1, text2):
         """ボタンのテキストを切り替える"""

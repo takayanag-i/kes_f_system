@@ -12,19 +12,9 @@ class PlotArrayHandler:
         self.reset_data()
 
     def reset_data(self):
-        self.t = np.array([])
-        self.y1 = np.array([])
-        self.y2 = np.array([])
-        self.y3 = np.array([])
-        self.y4 = np.array([])
-        self.y5 = np.array([])
-
-        self.t_plt = np.array([])
-        self.y1_plt = np.array([])
-        self.y2_plt = np.array([])
-        self.y3_plt = np.array([])
-        self.y4_plt = np.array([])
-        self.y5_plt = np.array([])
+        """データをリセット"""
+        self.data_array = np.empty((0, 6))  # t, y1, y2, y3, y4, y5
+        self.plot_array = np.empty((0, 6))  # t, y1, y2, y3, y4, y5
 
     def process_data(self, input1, input2):
         """一時データの切り出しと加工"""
@@ -37,34 +27,21 @@ class PlotArrayHandler:
             tmp4 = float(tmp4)
             tmp5 = float(tmp5) * 3.3 / 4095
             tmp6 = float(tmp6) * const.MICRO
-            return tmp1, tmp2, tmp3, tmp4, tmp5, tmp6
+            return np.array([tmp6, tmp1, tmp2, tmp3, tmp4, tmp5])
         except ValueError:
             return None
 
-    def update_arrays(self, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6):
+    def update_arrays(self, data):
         """保存用配列に値を追加"""
-        self.y1 = np.append(self.y1, tmp1)
-        self.y2 = np.append(self.y2, tmp2)
-        self.y3 = np.append(self.y3, tmp3)
-        self.y4 = np.append(self.y4, tmp4)
-        self.y5 = np.append(self.y5, tmp5)
-        self.t = np.append(self.t, tmp6)
+        self.data_array = np.vstack((self.data_array, data))
 
-    def update_plts(self, tmp1, tmp2, tmp3, tmp4, tmp5, tmp6):
+    def update_plts(self, data):
         """表示用配列に値を追加"""
-        self.y1_plt = np.append(self.y1_plt, tmp1)
-        self.y2_plt = np.append(self.y2_plt, tmp2)
-        self.y3_plt = np.append(self.y3_plt, tmp3)
-        self.y4_plt = np.append(self.y4_plt, tmp4)
-        self.y5_plt = np.append(self.y5_plt, tmp5)
-        self.t_plt = np.append(self.t_plt, tmp6)
-        return self.t_plt, self.y1_plt, self.y2_plt, self.y3_plt, \
-            self.y4_plt, self.y5_plt
+        self.plot_array = np.vstack((self.plot_array, data))
+        return self.plot_array.T  # 転置して、個別の配列として返す
 
     def save_to_csv(self):
         """データをCSVに保存する"""
-        array = np.array([self.t, self.y1, self.y2, self.y3, self.y4, self.y5])
-        array = array.T
         columns = ['Time', 'F1', 'F2', 'Disp1', 'Disp2', 'Sensor']
-        data = pd.DataFrame(array, columns=columns)
+        data = pd.DataFrame(self.data_array, columns=columns)
         data.to_csv(f"{self.window.line_edit.text()}.csv", index=False)
