@@ -3,11 +3,11 @@ import logging
 from PyQt6.QtWidgets import QComboBox
 from PyQt6.QtCore import QTimer
 
-from pkgs.common.constants import (Styles, Commands as cmd,
-                                   ArithmeticConstants as const)
+from pkgs.common.constants import Styles, Commands, ArithmeticConstants
 from pkgs.util.serial_manager import SerialManager, SerialManagerError
 from pkgs.util.motor_controller import MotorController
-from pkgs.util.plot_array_handler import PlotArrayHandler
+from pkgs.util.plot_array_handler import (PlotArrayHandler,
+                                          PlotArrayHandlerError)
 from pkgs.gui.main_window import Window
 
 
@@ -45,7 +45,7 @@ class Executor:
     def setup_event_handlers(self):
 
         # MainUI
-        self.window.save_button.set_callback(self.handler.save_to_csv)
+        self.window.save_button.set_callback(self.save)
         self.window.plot_start_button.set_callback(self.plot_start)
         self.window.plot_stop_button.set_callback(self.plot_stop)
         self.window.plot_reset_button.set_callback(self.reset)
@@ -69,9 +69,17 @@ class Executor:
         self.init_signal(self.window.combobox1, self.sm1)
         self.init_signal(self.window.combobox2, self.sm2)
 
+    def save(self):
+        try:
+            file_name = self.window.line_edit.text()
+            self.handler.save_to_csv(file_name)
+            self.show_message(f"{file_name}を保存しました", logging.INFO)
+        except PlotArrayHandlerError as e:
+            self.show_message(str(e), logging.ERROR)
+
     def plot_start(self):
         try:
-            self.sm1.write(cmd.PLOT_START)
+            self.sm1.write(Commands.PLOT_START)
             self.window.plot_start_button.setStyleSheet("")
             self.window.plot_stop_button.setStyleSheet(Styles.STYLE_REJECT)
         except SerialManagerError as e:
@@ -86,7 +94,7 @@ class Executor:
 
     def plot_stop(self):
         try:
-            self.sm1.write(cmd.PLOT_STOP)
+            self.sm1.write(Commands.PLOT_STOP)
         except SerialManagerError as e:
             self.show_message(str(e), logging.ERROR)
         finally:
@@ -152,7 +160,7 @@ class Executor:
 
         self.num += 1
 
-        if self.num >= const.DATA_LENGTH:
+        if self.num >= ArithmeticConstants.DATA_LENGTH:
             self.timer.stop()
             self.show_message("データ長がオーバーしています", logging.WARNING)
 
@@ -160,6 +168,7 @@ class Executor:
         try:
             self.sm1.close_port()
             self.sm2.close_port()
+            self.show_message('正常に終了しました', logging.INFO)
         except SerialManagerError as e:
             self.show_message(str(e), logging.ERROR)
         finally:

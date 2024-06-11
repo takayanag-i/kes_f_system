@@ -27,10 +27,10 @@ class ButtonLabels(StrEnum):
 
 class GraphLabels(StrEnum):
     """軸ラベル"""
-    TIME_AX = 'Time / s</font>'
-    FORCE_AX = 'Force / N</font>'
-    DISP_AX = 'Displacement / mm</font>'
-    SENSOR_AX = 'Sensor Output / V</font>'
+    TIME_AX = 'Time / s'
+    FORCE_AX = 'Force / N'
+    DISP_AX = 'Displacement / mm'
+    SENSOR_AX = 'Sensor Output / V'
 
 
 class FontConfig:
@@ -67,6 +67,41 @@ class Formats(StrEnum):
     """フォーマット"""
     # テキスト
     DATE_FMT = '%Y-%m%d-%H%M-プロジェクト名'
+
+
+class DataProperties:
+    """レコードの属性"""
+    PROPERTIES = {
+        1: 'Time',
+        2: 'Force1',
+        3: 'Force',
+        4: 'Disp1',
+        5: 'Disp2',
+        6: 'Sensor'
+    }
+
+    @classmethod
+    def get_property(cls, key):
+        """キーに対応するプロパティを取得"""
+        return cls.PROPERTIES.get(key)
+
+    @classmethod
+    def list_properties(cls):
+        """プロパティのリストを取得"""
+        return list(cls.PROPERTIES.values())
+
+    @classmethod
+    def list_keys(cls):
+        """キーのリストを取得"""
+        return list(cls.PROPERTIES.keys())
+
+    @classmethod
+    def get_key(cls, property_name):
+        """プロパティ名に対応するキーを取得"""
+        for key, value in cls.PROPERTIES.items():
+            if value == property_name:
+                return key
+        return None
 
 
 class Styles:
