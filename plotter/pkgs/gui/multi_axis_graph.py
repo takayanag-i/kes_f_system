@@ -1,8 +1,8 @@
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QGraphicsWidget
 from PyQt6.QtGui import QFont
-
-from pkgs.common.constants import FontConfig as FontConfig, GraphLavels as lv
+from pkgs.common.constants import (
+    FontConfig, GraphLabels, RangeValues, ColourValues, Styles)
 
 
 class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
@@ -16,94 +16,112 @@ class MultiAxisGraphWidget(pg.GraphicsLayoutWidget):
         self.show = True
         self.font = QFont(FontConfig.FONT_FAMILY, FontConfig.FONT_SIZE)
 
-        self.plot1 = self.addPlot(row=0, col=0)
-        self.curve1 = self.plot1.plot(pen=(221, 238, 255))
+        self.plotItem = self.addPlot(row=0, col=0)
 
-        self.curve2 = pg.PlotCurveItem(pen=(153, 221, 255))
-        self.curve3 = pg.PlotCurveItem(pen=(181, 255, 20))
-        self.curve4 = pg.PlotCurveItem(pen='r')
-        self.curve5 = pg.PlotCurveItem(pen='y')
+        # Curves and ViewBoxes
+        self.curves = self.create_curves()
+        self.view_boxes = self.create_view_boxes()
 
-        self.view_box2 = pg.ViewBox()
-        self.view_box3 = pg.ViewBox()
-        self.view_box4 = pg.ViewBox()
-        self.view_box5 = pg.ViewBox()
-
-        self.view_box2.addItem(self.curve2)
-        self.view_box3.addItem(self.curve3)
-        self.view_box4.addItem(self.curve4)
-        self.view_box5.addItem(self.curve5)
-
+        self.add_curves_to_view_boxes()
         self.ax5 = pg.AxisItem(orientation='right')
-        self.set_graph_multiple_axis(
-            self.plot1, self.view_box2, self.view_box3, self.view_box4,
-            self.view_box5, self.ax5)
-        self.set_graph_frame_font(self.plot1, self.ax5)
+        self.set_graph_multiple_axis()
+        self.set_graph_frame_font()
         self.setup_labels()
 
         pg.setConfigOptions(antialias=True)
 
-    def set_graph_multiple_axis(self, plot1: pg.PlotItem,
-                                view_box2:   pg.ViewBox,
-                                view_box3:   pg.ViewBox,
-                                view_box4:   pg.ViewBox,
-                                view_box5:   pg.ViewBox = None,
-                                ax5:         pg.AxisItem = None
-                                ):
-        plot1.showAxis('right')
-        plot1.scene().addItem(view_box2)
-        plot1.scene().addItem(view_box3)
-        plot1.scene().addItem(view_box4)
-        view_box3.linkView(1, view_box4)
-        plot1.getAxis('left').linkToView(view_box2)
-        plot1.getAxis('right').linkToView(view_box3)
-        view_box2.setXLink(plot1)
-        view_box2.setYLink(plot1)
-        view_box3.setXLink(plot1)
-        view_box4.setXLink(plot1)
-        view_box2.sigRangeChanged.connect(
-            lambda: view_box2.setGeometry(plot1.vb.sceneBoundingRect()))
-        view_box3.sigRangeChanged.connect(
-            lambda: view_box3.setGeometry(plot1.vb.sceneBoundingRect()))
-        view_box4.sigRangeChanged.connect(
-            lambda: view_box4.setGeometry(plot1.vb.sceneBoundingRect()))
+    def create_curves(self):
+        """Create and return a list of curves with different colors."""
+        return [
+            pg.PlotCurveItem(pen=ColourValues.LIGHT_BLUE),
+            pg.PlotCurveItem(pen=ColourValues.BLUE),
+            pg.PlotCurveItem(pen=ColourValues.GREEN),
+            pg.PlotCurveItem(pen=ColourValues.RED),
+            pg.PlotCurveItem(pen=ColourValues.YELLOW)
+        ]
 
-        if view_box5 is not None and ax5 is not None:
-            spacer = QGraphicsWidget()
-            spacer.setMaximumSize(15, 15)
-            plot1.layout.addItem(spacer, 2, 3)
-            plot1.layout.addItem(ax5, 2, 4)
-            plot1.scene().addItem(view_box5)
-            ax5.linkToView(view_box5)
-            view_box5.setXLink(plot1)
-            view_box5.sigRangeChanged.connect(
-                lambda: view_box5.setGeometry(plot1.vb.sceneBoundingRect()))
+    def create_view_boxes(self):
+        """Create and return a list of view boxes."""
+        return [pg.ViewBox() for _ in range(len(self.curves))]
 
-    def set_graph_frame_font(self, p1: pg.PlotItem, ax5: pg.AxisItem) -> None:
-        p1.getAxis('bottom').setStyle(tickFont=self.font)
-        p1.getAxis('bottom').setTextPen('#FFF')
-        p1.getAxis('left').setStyle(tickFont=self.font)
-        p1.getAxis('left').setTextPen('#FFF')
-        p1.getAxis('right').setStyle(tickFont=self.font)
-        p1.getAxis('right').setTextPen('#FFF')
-        ax5.setStyle(tickFont=self.font)
-        ax5.setTextPen('#FFF')
-        p1.getAxis('bottom').setHeight(3.5 * 12)
-        p1.getAxis('left').setWidth(4 * 12)
-        p1.getAxis('right').setWidth(4.3 * 12)
-        ax5.setWidth(6 * 12)
+    def add_curves_to_view_boxes(self):
+        """Add each curve to its corresponding view box."""
+        for curve, view_box in zip(self.curves, self.view_boxes):
+            view_box.addItem(curve)
 
-    def setup_labels(self) -> None:
-        labelstyle = {'color': '#FFF', 'font-size': '12pt'}
-        self.plot1.setLabel('left', lv.FORCE_AX_LAVEL, **labelstyle)
-        self.plot1.setLabel('right', lv.DISP_AX_LAVEL, **labelstyle)
-        self.plot1.setLabel('bottom', lv.TIME_AX_LAVEL, **labelstyle)
-        self.ax5.setLabel(lv.SENSOR_AX_LAVEL, **labelstyle)
+    def set_graph_multiple_axis(self):
+        """Set up multiple axes for the graph."""
+        self.plotItem.showAxis('right')
 
-        self.plot1.setXRange(0, 50, padding=0)
-        self.plot1.setYRange(-0.1, 3.3, padding=0)
-        # p1.setRange(yRange = (-10, 10), padding = 0)
-        self.view_box2.setRange(yRange=(-0.1, 3.3), padding=0)
-        self.view_box3.setRange(yRange=(-10, 10), padding=0)
-        self.view_box4.setRange(yRange=(-10, 10), padding=0)
-        self.view_box5.setRange(yRange=(-0.1, 3.3), padding=0)
+        for view_box in self.view_boxes:
+            self.plotItem.scene().addItem(view_box)
+
+        self.link_view_boxes()
+        self.plotItem.getAxis('left').linkToView(self.view_boxes[0])
+        self.plotItem.getAxis('right').linkToView(self.view_boxes[2])
+        self.link_view_boxes_to_plot_item()
+        self.setup_view_box_range_signals()
+
+        spacer = QGraphicsWidget()
+        spacer.setMaximumSize(15, 15)
+        self.plotItem.layout.addItem(spacer, 2, 3)
+        self.plotItem.layout.addItem(self.ax5, 2, 4)
+        self.ax5.linkToView(self.view_boxes[4])
+        self.view_boxes[4].setXLink(self.plotItem)
+        self.view_boxes[4].sigRangeChanged.connect(
+            lambda: self.view_boxes[4].setGeometry(
+                self.plotItem.vb.sceneBoundingRect()))
+
+    def link_view_boxes(self):
+        """Link view boxes together."""
+        self.view_boxes[0].linkView(1, self.view_boxes[1])
+        self.view_boxes[2].linkView(1, self.view_boxes[3])
+
+    def link_view_boxes_to_plot_item(self):
+        """Link view boxes to the plot item."""
+        for view_box in self.view_boxes:
+            view_box.setXLink(self.plotItem)
+
+    def setup_view_box_range_signals(self):
+        """Set up signals to update view box ranges."""
+        for view_box in self.view_boxes:
+            view_box.sigRangeChanged.connect(
+                lambda vb=view_box: vb.setGeometry(
+                    self.plotItem.vb.sceneBoundingRect()))
+
+    def set_graph_frame_font(self):
+        """Set font and color for graph axes."""
+        self.plotItem.getAxis('bottom').setStyle(tickFont=self.font)
+        self.plotItem.getAxis('bottom').setTextPen(ColourValues.WHITE)
+        self.plotItem.getAxis('left').setStyle(tickFont=self.font)
+        self.plotItem.getAxis('left').setTextPen(ColourValues.WHITE)
+        self.plotItem.getAxis('right').setStyle(tickFont=self.font)
+        self.plotItem.getAxis('right').setTextPen(ColourValues.WHITE)
+        self.ax5.setStyle(tickFont=self.font)
+        self.ax5.setTextPen(ColourValues.WHITE)
+        self.set_axis_dimensions()
+
+    def set_axis_dimensions(self):
+        """Set dimensions for the axes."""
+        self.plotItem.getAxis('bottom').setHeight(42)  # 3.5 * 12
+        self.plotItem.getAxis('left').setWidth(48)  # 4 * 12
+        self.plotItem.getAxis('right').setWidth(51.6)  # 4.3 * 12
+        self.ax5.setWidth(72)  # 6 * 12
+
+    def setup_labels(self):
+        """Set up labels for the graph axes."""
+        self.plotItem.setLabel(
+            'left', GraphLabels.FORCE_AX, **Styles.LABEL_STYLE)
+        self.plotItem.setLabel(
+            'right', GraphLabels.DISP_AX, **Styles.LABEL_STYLE)
+        self.plotItem.setLabel(
+            'bottom', GraphLabels.TIME_AX, **Styles.LABEL_STYLE)
+        self.ax5.setLabel(GraphLabels.SENSOR_AX, **Styles.LABEL_STYLE)
+
+        self.plotItem.setXRange(*RangeValues.X_RANGE, padding=0)
+
+        self.view_boxes[0].setRange(yRange=RangeValues.Y_RANGE1, padding=0)
+        self.view_boxes[1].setRange(yRange=RangeValues.Y_RANGE1, padding=0)
+        self.view_boxes[2].setRange(yRange=RangeValues.Y_RANGE2, padding=0)
+        self.view_boxes[3].setRange(yRange=RangeValues.Y_RANGE2, padding=0)
+        self.view_boxes[4].setRange(yRange=RangeValues.Y_RANGE1, padding=0)

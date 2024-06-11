@@ -129,30 +129,26 @@ class Executor:
 
         try:
             processed_data = self.handler.process_data(input1, input2)
+            if processed_data is None:
+                raise ValueError("データの処理に失敗しました")
         except ValueError as e:
             self.show_message(str(e), logging.ERROR)
             return
 
-        tmp1, tmp2, tmp3, tmp4, tmp5, tmp6 = processed_data
-
         # 2回目で初期時刻を格納
         if self.num == 1:
-            self.t0 = tmp6
+            self.t0 = processed_data[0]
 
         # 2回目以降の処理のつづき
-        tmp6 -= self.t0
-        self.handler.update_arrays(tmp1, tmp2, tmp3, tmp4,
-                                   tmp5, tmp6)
+        processed_data[0] -= self.t0
+        self.handler.update_arrays(processed_data)
 
         if self.num % 5 == 0:
-            t_plt, y1_plt, y2_plt, y3_plt, y4_plt, y5_plt\
-                    = self.handler.update_plts(tmp1, tmp2, tmp3,
-                                               tmp4, tmp5, tmp6)
-            self.window.plot_area.curve1.setData(t_plt, y1_plt)
-            self.window.plot_area.curve2.setData(t_plt, y2_plt)
-            self.window.plot_area.curve3.setData(t_plt, y3_plt)
-            self.window.plot_area.curve4.setData(t_plt, y4_plt)
-            self.window.plot_area.curve5.setData(t_plt, y5_plt)
+            plot_array = self.handler.update_plts(processed_data)
+            t_plt = plot_array[0]
+            y_plts = plot_array[1:]
+            for curve, y_plt in zip(self.window.plot_area.curves, y_plts):
+                curve.setData(t_plt, y_plt)
 
         self.num += 1
 

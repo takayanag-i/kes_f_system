@@ -3,7 +3,6 @@ from enum import Enum, StrEnum
 
 class Commands(bytes, Enum):
     """コマンド"""
-
     # プロッタ
     PLOT_START = b'0'
     PLOT_STOP = b'1'
@@ -11,27 +10,27 @@ class Commands(bytes, Enum):
     MOTOR_START1 = b'3'
     MOTOR_STOP1 = b'4'
     MOTOR_REVERSE1 = b'5'
-
     MOTOR_START2 = b'7'
     MOTOR_STOP2 = b'8'
     MOTOR_REVERSE2 = b'9'
 
 
-class ButtonLavels(StrEnum):
-    ELONG_LAVEL1 = '1のばす'
-    SHRINK_LAVEL1 = '1縮める'
-    REVERS_LAVEL1 = '1逆回転'
-    ELONG_LAVEL2 = '2のばす'
-    SHRINK_LAVEL2 = '2縮める'
-    REVERS_LAVEL2 = '2逆回転'
+class ButtonLabels(StrEnum):
+    """ボタンのラベル"""
+    ELONG1 = '1のばす'
+    SHRINK1 = '1縮める'
+    REVERSE1 = '1逆回転'
+    ELONG2 = '2のばす'
+    SHRINK2 = '2縮める'
+    REVERSE2 = '2逆回転'
 
 
-class GraphLavels(StrEnum):
+class GraphLabels(StrEnum):
     """軸ラベル"""
-    TIME_AX_LAVEL = 'Time / s</font>'
-    FORCE_AX_LAVEL = 'Force / N</font>'
-    DISP_AX_LAVEL = 'Displacement / mm</font>'
-    SENSOR_AX_LAVEL = 'Sensor Output / V</font>'
+    TIME_AX = 'Time / s</font>'
+    FORCE_AX = 'Force / N</font>'
+    DISP_AX = 'Displacement / mm</font>'
+    SENSOR_AX = 'Sensor Output / V</font>'
 
 
 class FontConfig:
@@ -46,13 +45,31 @@ class ArithmeticConstants:
     DATA_LENGTH = int(2**20)
 
 
+class RangeValues:
+    """範囲の設定"""
+    X_RANGE = (0, 50)
+    Y_RANGE1 = (-0.1, 3.3)
+    Y_RANGE2 = (-10, 10)
+    RIGHT_AXIS_RANGE = (-10, 10)
+
+
+class ColourValues:
+    """色の設定"""
+    LIGHT_BLUE = '#DDEEFF'
+    BLUE = '#99DDFF'
+    GREEN = '#B5FF14'
+    RED = '#FF0000'
+    YELLOW = '#FFFF00'
+    WHITE = '#FFFFFF'
+
+
 class Formats(StrEnum):
     """フォーマット"""
     # テキスト
     DATE_FMT = '%Y-%m%d-%H%M-プロジェクト名'
 
 
-class Styles(StrEnum):
+class Styles:
     """スタイル"""
     STYLE = """
     QPushButton {
@@ -84,3 +101,4 @@ class Styles(StrEnum):
         background-color: #922b21;
     }
     """
+    LABEL_STYLE = {'color': ColourValues.WHITE, 'font-size': '12pt'}
